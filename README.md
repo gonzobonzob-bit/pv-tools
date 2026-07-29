@@ -20,19 +20,30 @@ Tesla source URLs.
 
 ## Consolidation status
 
-This repo is the intended long-term home for all three tools. Right now Lynx and Magpie
-are **copies** — their original standalone repos still exist and still have their own
-Pages sites:
+This repo is the home for all three tools.
 
-| Tool | Original repo | Status |
+| Tool | Standalone repo | Status |
 |---|---|---|
+| PW3 String Analyzer | none — never created | **hub is the only home** |
 | Lynx | `gonzobonzob-bit/pv-ct-review` | still live — copy here will drift |
 | Magpie | `gonzobonzob-bit/magpie-notes` | still live — copy here will drift |
 
-**A fix applied in an original repo does not reach the copy here, and vice versa.** Pick
-one side as authoritative per tool and retire the other before doing real work on them.
-The originals can be archived on GitHub (Settings → Archive) once this repo's Pages site
-is confirmed working, which keeps their URLs alive read-only.
+PW3 String Analyzer exists only here, so it has no drift risk.
+
+Lynx and Magpie are **copies**, and their originals are still live with their own Pages
+sites. **A fix applied in an original repo does not reach the copy here, and vice versa.**
+This matters most for Lynx: per `lynx/CLAUDE.md` its normal workflow is to iterate in the
+Claude.ai web app, download `index.html`, and drop the new file in — a flow that lands in
+whichever checkout is open at the time, which is exactly how the two copies diverge
+silently.
+
+Pick one side as authoritative per tool and retire the other before doing real work on
+them. Once this repo's Pages site is confirmed working, the originals can be archived on
+GitHub (Settings → Archive), which keeps their URLs alive read-only.
+
+One deliberate difference from the originals: the Lynx and Magpie copies here carry the
+full four-tag crawler block (`robots`, `googlebot`, `bingbot`, `referrer`) matching pw3.
+The originals ship a weaker single `robots` tag. Nothing else in either tool was touched.
 
 Toward an actual hub, the obvious shared pieces are: CSV parsing, the readings-table UI,
 the severity/status model, and the light/dark styling. Nothing is shared yet — each tool
@@ -64,14 +75,23 @@ Two limits worth knowing:
 
 1. **This is not access control.** The Pages URL is unlisted, not secret — anyone holding
    it can open the page. Don't put customer names, addresses, or site data into the tools.
-2. **`robots.txt` is inert on a project Pages site.** Crawlers only read robots.txt from a
-   domain root (`gonzobonzob-bit.github.io/robots.txt`), never from
-   `gonzobonzob-bit.github.io/pv-tools/`. The meta tags do the actual work. Consolidating
-   here does make the root-robots.txt fix viable for the first time: a single
-   `gonzobonzob-bit.github.io` user-site repo would cover every tool in one shot.
+2. **`robots.txt` in this repo is inert**, and always was. Crawlers only read robots.txt
+   from a host root (`gonzobonzob-bit.github.io/robots.txt`), never from
+   `gonzobonzob-bit.github.io/pv-tools/`. The file is kept here only so it takes effect
+   automatically if this ever moves to a custom domain.
+
+   **The real fix now exists** in the `gonzobonzob-bit.github.io` user-site repo. That is
+   the only repo that can publish at this host's root, so its `robots.txt` is the only one
+   crawlers actually read — and it covers every project site on the hostname at once, this
+   one included. See that repo's README for the full picture.
+
+3. **The Pages URLs are enumerable, not secret.** The GitHub account is public, so anyone
+   can read off every repo name and derive its Pages URL mechanically. `noindex` keeps
+   these pages out of search results; it does not stop someone looking at the account from
+   finding them. Closing that gap means private repos, which disables Pages on a free plan.
 
 The repository page itself is indexable on github.com — GitHub controls those headers and
-there's no opt-out short of going private, which would cost Pages on a free plan.
+there's no opt-out short of going private.
 
 ---
 
