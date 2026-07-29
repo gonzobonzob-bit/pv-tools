@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1a1a">
+<!-- Keep this page out of search results. Honored by Google, Bing, DuckDuckGo,
+     Yandex. This is NOT access control - anyone with the URL can still open it. -->
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<title>PW3 String Analyzer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f5f7;color:#1a1a1a;line-height:1.5;padding:12px;padding-bottom:48px;-webkit-text-size-adjust:100%}
+.container{max-width:640px;margin:0 auto}
+.header{margin-bottom:16px;padding:12px 0;border-bottom:2px solid #dfe1e6}
+.header h1{font-size:22px;font-weight:600;letter-spacing:-.01em}
+.header p{font-size:12px;color:#6b778c;margin-top:2px}
+.card{background:#fff;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid #dfe1e6}
+.variant-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.variant-row label{font-size:12px;font-weight:600;text-transform:uppercase;color:#6b778c;letter-spacing:.5px}
+select{flex:1;min-width:180px;font-size:15px;padding:9px 10px;border:1px solid #c1c7d0;border-radius:6px;background:#fff;color:#1a1a1a}
+.variant-hint{font-size:11px;color:#6b778c;margin-top:8px;line-height:1.45}
+.set-group{margin-bottom:18px}
+.set-label{font-size:12px;font-weight:600;text-transform:uppercase;color:#42526e;margin-bottom:2px;letter-spacing:.5px}
+.set-sub{font-size:11px;color:#6b778c;margin-bottom:10px}
+.mppt-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mppt-box{border:1px solid #ebecf0;border-radius:8px;padding:10px;background:#fafbfc}
+.mppt-title{font-size:11px;font-weight:700;color:#42526e;margin-bottom:8px;letter-spacing:.4px}
+.input-group{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.input-group:last-child{margin-bottom:0}
+.input-group label{font-size:11px;color:#6b778c;font-weight:600;width:16px}
+input[type=number]{width:100%;font-size:16px;padding:8px;border:1px solid #c1c7d0;border-radius:5px;text-align:right;background:#fff;-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]:focus{outline:none;border-color:#0052cc;box-shadow:0 0 0 2px rgba(0,82,204,.18)}
+.set-divider{height:1px;background:#ebecf0;margin:18px 0}
+.button-group{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:6px}
+button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px;cursor:pointer;font-family:inherit}
+.analyze-btn{background:#0052cc;color:#fff}
+.analyze-btn:active{background:#0043a6}
+.reset-btn{background:#f4f5f7;color:#42526e;border:1px solid #c1c7d0}
+.output-section{display:none}
+.output-section.active{display:block}
+.status-bar{display:flex;align-items:center;gap:9px;padding:13px 15px;border-radius:8px;font-weight:600;font-size:16px;margin-bottom:14px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-bar.green{background:#e3fcef;color:#006644}.status-bar.green .status-dot{background:#00875a}
+.status-bar.yellow{background:#fffae6;color:#974f0c}.status-bar.yellow .status-dot{background:#ff8b00}
+.status-bar.red{background:#ffebe6;color:#bf2600}.status-bar.red .status-dot{background:#de350b}
+.status-bar.grey{background:#f4f5f7;color:#42526e}.status-bar.grey .status-dot{background:#8993a4}
+.config-summary{background:#fff;border:1px solid #dfe1e6;border-radius:10px;padding:14px;margin-bottom:14px}
+.cfg-set{padding:10px 0}
+.cfg-set+.cfg-set{border-top:1px solid #ebecf0}
+.config-line{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
+.config-label{color:#6b778c;flex-shrink:0}
+.config-value{font-weight:600;text-align:right}
+.j-in{color:#006644}.j-out{color:#974f0c}.j-unk{color:#6b778c}.j-na{color:#8993a4}
+.findings-section{background:#fff;border:1px solid #dfe1e6;border-radius:10px;padding:14px}
+.findings-title{font-size:12px;font-weight:700;text-transform:uppercase;color:#6b778c;letter-spacing:.5px;margin-bottom:10px}
+.finding{font-size:13px;padding:9px 11px;border-radius:6px;margin-bottom:7px;border-left:3px solid}
+.finding:last-child{margin-bottom:0}
+.finding.info{background:#deebff;border-color:#0052cc;color:#0747a6}
+.finding.warning{background:#fffae6;border-color:#ff8b00;color:#974f0c}
+.finding.error{background:#ffebe6;border-color:#de350b;color:#bf2600}
+.finding.ok{background:#e3fcef;border-color:#00875a;color:#006644}
+.diagnostic-note{font-size:11px;color:#6b778c;margin-top:14px;padding:12px;background:#fff;border:1px solid #dfe1e6;border-radius:8px;line-height:1.6}
+.diagnostic-note b{color:#42526e}
+.footer{font-size:10px;color:#8993a4;text-align:center;margin-top:18px;line-height:1.6}
+.footer .credit{display:inline-block;margin-top:6px;color:#a5adba;letter-spacing:.04em}
+@media (max-width:400px){.mppt-pair{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>PW3 String Analyzer</h1>
+    <p>Tesla Powerwall 3 &mdash; MPPT configuration diagnostic &middot; v4.0</p>
+  </div>
+
+  <div class="card">
+    <div class="variant-row">
+      <label for="variant">Unit rating</label>
+      <select id="variant">
+        <option value="13" selected>13 A Imp unit (most units)</option>
+        <option value="15">15 A Imp unit (P/N 1707000-11-L / -21-L and higher)</option>
+      </select>
+    </div>
+    <div class="variant-hint">Tesla ships two PW3 variants with different PV input current ratings. Check the label in the enclosure. Getting this wrong changes every current verdict below.</div>
+  </div>
+
+  <div class="card">
+    <form id="form" novalidate>
+
+      <div class="set-group">
+        <div class="set-label">Set A &mdash; MPPT 1 &amp; 2</div>
+        <div class="set-sub">Jumper-capable pair (1&#8596;2)</div>
+        <div class="mppt-pair">
+          <div class="mppt-box"><div class="mppt-title">MPPT 1</div>
+            <div class="input-group"><label for="m1v">V</label><input type="number" id="m1v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m1a">A</label><input type="number" id="m1a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+          <div class="mppt-box"><div class="mppt-title">MPPT 2</div>
+            <div class="input-group"><label for="m2v">V</label><input type="number" id="m2v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m2a">A</label><input type="number" id="m2a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-divider"></div>
+
+      <div class="set-group">
+        <div class="set-label">Set B &mdash; MPPT 3 &amp; 4</div>
+        <div class="set-sub">Independent inputs &mdash; factory-closed, cannot be jumpered</div>
+        <div class="mppt-pair">
+          <div class="mppt-box"><div class="mppt-title">MPPT 3</div>
+            <div class="input-group"><label for="m3v">V</label><input type="number" id="m3v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m3a">A</label><input type="number" id="m3a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+          <div class="mppt-box"><div class="mppt-title">MPPT 4</div>
+            <div class="input-group"><label for="m4v">V</label><input type="number" id="m4v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m4a">A</label><input type="number" id="m4a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-divider"></div>
+
+      <div class="set-group">
+        <div class="set-label">Set C &mdash; MPPT 5 &amp; 6</div>
+        <div class="set-sub">Jumper-capable pair (5&#8596;6)</div>
+        <div class="mppt-pair">
+          <div class="mppt-box"><div class="mppt-title">MPPT 5</div>
+            <div class="input-group"><label for="m5v">V</label><input type="number" id="m5v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m5a">A</label><input type="number" id="m5a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+          <div class="mppt-box"><div class="mppt-title">MPPT 6</div>
+            <div class="input-group"><label for="m6v">V</label><input type="number" id="m6v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
+            <div class="input-group"><label for="m6a">A</label><input type="number" id="m6a" inputmode="decimal" min="0" step="0.1" placeholder="9.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="analyze-btn">Analyze</button>
+        <button type="button" class="reset-btn" id="clearBtn">Clear</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="output-section" id="output">
+    <div id="status"></div>
+    <div id="config"></div>
+    <div id="findings"></div>
+  </div>
+
+  <div class="diagnostic-note" id="specNote"></div>
+
+  <div class="footer">
+    Readings come from Tesla One &rarr; Solar DC Inputs.<br>
+    Advisory tool only &mdash; verify jumper state visually before changing wiring.<br>
+    <span class="credit">Built by gonzobonzob-bit</span>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Specs (Tesla energylibrary, verified 2026-07) ---------- */
+
+// Two hardware variants with different PV input current ratings.
+var VARIANTS = {
+  "13": { imp1: 13, isc1: 15, imp2: 26, isc2: 30, name: "13 A" },
+  "15": { imp1: 15, isc1: 19, imp2: 30, isc2: 38, name: "15 A" }
+};
+
+// Voltage limits are the same across variants.
+var V_SPEC = {
+  MPPT_MIN: 60,    // bottom of PV DC MPPT voltage range
+  MPPT_MAX: 480,   // top of PV DC MPPT voltage range
+  ABS_MAX: 550     // top of PV DC input voltage range (absolute)
+};
+
+var ON_A       = 0.2;    // amps above which an input counts as powered
+var V_TOL_PCT  = 0.025;  // 2.5% proportional voltage-match tolerance
+var V_TOL_MIN  = 5;      // ...with a 5 V floor
+var BAL_RATIO  = 0.4;    // below this current ratio, call it imbalanced
+
+// Severity ladder. Highest wins for the overall banner.
+var SEV = { NONE: 0, OK: 1, INFO: 2, WARN: 3, ERROR: 4 };
+
+var SETS = [
+  { key: "A", ids: [1, 2], jumperable: true  },
+  { key: "B", ids: [3, 4], jumperable: false },
+  { key: "C", ids: [5, 6], jumperable: true  }
+];
+
+/* ---------- Helpers ---------- */
+
+function readField(id) {
+  var el = document.getElementById(id);
+  var raw = el ? String(el.value).trim() : "";
+  if (raw === "") return { blank: true, val: 0, bad: false };
+  var n = Number(raw.replace(",", "."));
+  if (!isFinite(n)) return { blank: false, val: 0, bad: true };
+  return { blank: false, val: n, bad: false };
+}
+
+function vTol(a, b) {
+  return Math.max(V_TOL_MIN, V_TOL_PCT * Math.max(a, b));
+}
+
+function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+/* ---------- Read + validate the form ---------- */
+
+function readAll() {
+  var sets = [];
+  var anyEntered = false;
+  var badFields = [];
+
+  for (var s = 0; s < SETS.length; s++) {
+    var def = SETS[s];
+    var mppts = [];
+    for (var i = 0; i < 2; i++) {
+      var id = def.ids[i];
+      var fv = readField("m" + id + "v");
+      var fa = readField("m" + id + "a");
+      if (fv.bad) badFields.push("MPPT " + id + " V");
+      if (fa.bad) badFields.push("MPPT " + id + " A");
+      var entered = !fv.blank || !fa.blank;
+      if (entered) anyEntered = true;
+      mppts.push({
+        id: id,
+        v: fv.val,
+        a: fa.val,
+        entered: entered,
+        on: fa.val > ON_A
+      });
+    }
+    sets.push({ key: def.key, jumperable: def.jumperable, m: mppts,
+                entered: mppts[0].entered || mppts[1].entered });
+  }
+
+  return { sets: sets, anyEntered: anyEntered, badFields: badFields };
+}
+
+function hardErrors(data, spec) {
+  var errs = [];
+
+  for (var s = 0; s < data.sets.length; s++) {
+    var set = data.sets[s];
+    for (var i = 0; i < 2; i++) {
+      var m = set.m[i];
+      if (!m.entered) continue;
+
+      if (m.v < 0 || m.a < 0) {
+        errs.push("MPPT " + m.id + ": negative value entered.");
+        continue;
+      }
+
+      // Above the jumpered ISC ceiling is not a physically possible reading here.
+      if (m.a > spec.isc2) {
+        errs.push("MPPT " + m.id + ": " + fmt(m.a) + " A exceeds the " +
+                  spec.isc2 + " A jumpered ISC ceiling. Re-check the reading.");
+      }
+    }
+  }
+  return errs;
+}
+
+/* ---------- Per-set analysis ---------- */
+
+function mkAdd(out) {
+  return function (t, txt) {
+    out.findings.push({ t: t, txt: txt });
+    var lvl = t === "error" ? SEV.ERROR : t === "warning" ? SEV.WARN : t === "ok" ? SEV.OK : SEV.INFO;
+    if (lvl > out.sev) out.sev = lvl;
+  };
+}
+
+function checkVoltage(m, add) {
+  if (!m.entered) return;
+  // Overvoltage matters MOST at zero current (cold-morning open-circuit Voc),
+  // so these checks are deliberately NOT gated on the input being powered.
+  if (m.v > V_SPEC.ABS_MAX) {
+    add("error", "MPPT " + m.id + ": " + fmt(m.v) + " V exceeds the " + V_SPEC.ABS_MAX +
+      " V absolute input maximum. Equipment damage risk - de-energize and re-check string sizing.");
+  } else if (m.v > V_SPEC.MPPT_MAX) {
+    add("warning", "MPPT " + m.id + ": " + fmt(m.v) + " V is above the " + V_SPEC.MPPT_MAX +
+      " V MPPT tracking range (still under the " + V_SPEC.ABS_MAX + " V input max). Expect reduced or no tracking.");
+  } else if (m.on && m.v < V_SPEC.MPPT_MIN) {
+    add("warning", "MPPT " + m.id + ": " + fmt(m.v) + " V is below the " + V_SPEC.MPPT_MIN +
+      " V MPPT minimum while drawing current. Check string length and connections.");
+  }
+}
+
+function analyzeJumperable(set, spec) {
+  var m1 = set.m[0], m2 = set.m[1];
+  var ids = m1.id + "-" + m2.id;
+  var out = { key: set.key, ids: [m1.id, m2.id], findings: [], jumper: "N/A", cfg: "", sev: SEV.NONE };
+  var add = mkAdd(out);
+
+  if (!set.entered) {
+    out.cfg = "No readings entered";
+    out.jumper = "-";
+    add("info", "Set " + set.key + ": no readings entered - not assessed.");
+    return out;
+  }
+
+  if (!m1.on && !m2.on) {
+    out.cfg = "Both inputs unpowered";
+    out.jumper = "Unknown";
+    add("info", "Set " + set.key + ": both inputs unpowered. Normal at night or if unused; "
+      + "otherwise check RSD, DC disconnect and string continuity.");
+    // Voc present with no current means the string is there but nothing is
+    // drawing from it - system stopped, RSD tripped, or a failed MPPT.
+    for (var q = 0; q < 2; q++) {
+      if (set.m[q].entered && set.m[q].v > V_SPEC.MPPT_MIN) {
+        add("warning", "MPPT " + set.m[q].id + ": " + fmt(set.m[q].v) +
+          " V present but no current - string is live, nothing is drawing from it. " +
+          "Check whether the system is stopped, the RSD has tripped, or the MPPT has failed.");
+      }
+    }
+    checkVoltage(m1, add); checkVoltage(m2, add);
+    return out;
+  }
+
+  /* --- exactly one input powered --- */
+  if (m1.on !== m2.on) {
+    var live = m1.on ? m1 : m2;
+    var dead = m1.on ? m2 : m1;
+    out.cfg = "MPPT " + live.id + " only (" + fmt(live.a) + " A)";
+
+    if (live.a > spec.imp1) {
+      // FIELD-CONFIRMED BEHAVIOR: a working jumper ties both inputs to one
+      // electrical node, so Tesla One reports matched voltage on both inputs and
+      // the current SPLIT across the pair. Current on one input with its partner
+      // at zero therefore CANNOT be a working jumper - the jumper is absent or
+      // faulty and this input is carrying the whole string alone.
+      out.jumper = "OUT or faulty";
+      add("error", "Set " + set.key + ": MPPT " + live.id + " is carrying " + fmt(live.a) +
+        " A alone - over the " + spec.imp1 + " A single-input Imp limit - while MPPT " + dead.id +
+        " reads zero. A working " + ids + " jumper splits current across both inputs, so the jumper is " +
+        "MISSING OR FAULTY and this input is overloaded. Stop the system and inspect the jumper.");
+    } else {
+      out.jumper = "Not required";
+      add("ok", "Set " + set.key + ": MPPT " + live.id + " at " + fmt(live.a) + " A, within the " +
+        spec.imp1 + " A single-input limit. No jumper needed.");
+    }
+
+    if (dead.entered && dead.v > V_SPEC.MPPT_MIN && !dead.on) {
+      add("warning", "Set " + set.key + ": MPPT " + dead.id + " shows " + fmt(dead.v) +
+        " V but no current - voltage present, string not producing. Check for an open circuit or a failed MPPT.");
+    }
+
+    checkVoltage(m1, add); checkVoltage(m2, add);
+    return out;
+  }
+
+  /* --- both inputs powered --- */
+  var total = m1.a + m2.a;
+  var dv = Math.abs(m1.v - m2.v);
+  var vMatch = dv <= vTol(m1.v, m2.v);
+  var ratio = Math.min(m1.a, m2.a) / Math.max(m1.a, m2.a);
+
+  // Report jumper state honestly. Readings cannot distinguish a jumpered pair
+  // from two well-matched independent strings, so only assert what is provable.
+  if (!vMatch) {
+    out.jumper = "OUT";
+  } else if (total > spec.imp1) {
+    out.jumper = "Required";
+  } else {
+    out.jumper = "Unknown";
+  }
+
+  out.cfg = "Both inputs live (" + fmt(m1.a) + " A / " + fmt(m2.a) + " A, " + fmt(total) + " A total)";
+
+  if (total > spec.imp2) {
+    add("error", "Set " + set.key + ": combined " + fmt(total) + " A exceeds the " + spec.imp2 +
+      " A jumpered Imp limit. Overloaded even with the " + ids + " jumper in. Strings must be redistributed.");
+  } else if (!vMatch) {
+    add(total > spec.imp1 ? "warning" : "info",
+      "Set " + set.key + ": voltages differ by " + fmt(dv) + " V (" + fmt(m1.v) + " V vs " +
+      fmt(m2.v) + " V). The " + ids + " jumper is definitively NOT installed - a jumper cannot sustain a voltage difference. " +
+      (total > spec.imp1
+        ? "Combined current is " + fmt(total) + " A, over the " + spec.imp1 + " A single-input limit - this needs attention."
+        : "If these are two independent strings of different lengths, this is expected and fine."));
+  } else if (total > spec.imp1) {
+    add("warning", "Set " + set.key + ": combined " + fmt(total) + " A is over the " + spec.imp1 +
+      " A single-input Imp limit, so a " + ids + " jumper is required. Matched voltage with the current split " +
+      "across both inputs is exactly the signature of a working jumper - but two matched independent strings " +
+      "read identically. VERIFY THE JUMPER VISUALLY.");
+  } else {
+    add("ok", "Set " + set.key + ": " + fmt(total) + " A combined, within the " + spec.imp1 +
+      " A single-input limit. No jumper required either way.");
+  }
+
+  if (vMatch && ratio < BAL_RATIO) {
+    add("warning", "Set " + set.key + ": current imbalance " + fmt(m1.a) + " A vs " + fmt(m2.a) +
+      " A. Check for shading, soiling, a partially disconnected string, or unequal module counts.");
+  }
+
+  checkVoltage(m1, add); checkVoltage(m2, add);
+  return out;
+}
+
+function analyzeIndependent(set, spec) {
+  // MPPT 3 and 4. Tesla: "MPPT inputs 3 and 4 cannot be jumped and are closed
+  // from the factory." They are two normal, fully independent MPPTs. Both being
+  // powered simultaneously is completely routine - NOT an error.
+  var out = { key: set.key, ids: [set.m[0].id, set.m[1].id], findings: [], jumper: "N/A", cfg: "", sev: SEV.NONE };
+  var add = mkAdd(out);
+
+  if (!set.entered) {
+    out.cfg = "No readings entered";
+    add("info", "Set " + set.key + ": no readings entered - not assessed.");
+    return out;
+  }
+
+  var live = [];
+  for (var i = 0; i < 2; i++) if (set.m[i].on) live.push(set.m[i]);
+
+  if (live.length === 0) {
+    out.cfg = "Both inputs unpowered";
+    add("info", "Set " + set.key + ": both inputs unpowered. Normal at night or if unused.");
+  } else {
+    var parts = [];
+    for (var j = 0; j < live.length; j++) parts.push("MPPT " + live[j].id + " " + fmt(live[j].a) + " A");
+    out.cfg = parts.join(" / ");
+    if (live.length === 2) {
+      add("ok", "Set " + set.key + ": MPPT 3 and 4 both producing independently. This is a normal configuration.");
+    }
+  }
+
+  for (var k = 0; k < 2; k++) {
+    var m = set.m[k];
+    if (!m.entered) continue;
+
+    if (m.on && m.a > spec.isc1) {
+      add("error", "MPPT " + m.id + ": " + fmt(m.a) + " A exceeds the " + spec.isc1 +
+        " A single-input ISC rating. MPPT 3 and 4 cannot be jumpered - this string must be split across other inputs.");
+    } else if (m.on && m.a > spec.imp1) {
+      add("warning", "MPPT " + m.id + ": " + fmt(m.a) + " A is over the " + spec.imp1 +
+        " A single-input Imp limit. No jumper option exists on 3/4 - move part of this string to another MPPT.");
+    }
+
+    if (!m.on && m.v > V_SPEC.MPPT_MIN) {
+      add("warning", "MPPT " + m.id + ": " + fmt(m.v) +
+        " V present but no current - string not producing. Check for an open circuit or a failed MPPT.");
+    }
+
+    checkVoltage(m, add);
+  }
+
+  return out;
+}
+
+/* ---------- Render ---------- */
+
+function jumperClass(j) {
+  if (j === "Required") return "j-in";
+  if (j === "OUT" || j === "OUT or faulty") return "j-out";
+  if (j === "N/A" || j === "-") return "j-na";
+  return "j-unk";
+}
+
+function showErrors(errs) {
+  document.getElementById("status").innerHTML =
+    '<div class="status-bar red"><span class="status-dot"></span><span>Check your data</span></div>';
+  document.getElementById("config").innerHTML = "";
+  var h = '<div class="findings-section"><div class="findings-title">Issues</div>';
+  for (var i = 0; i < errs.length; i++) h += '<div class="finding error">' + esc(errs[i]) + "</div>";
+  document.getElementById("findings").innerHTML = h + "</div>";
+  document.getElementById("output").classList.add("active");
+}
+
+function showNotice(txt) {
+  document.getElementById("status").innerHTML =
+    '<div class="status-bar grey"><span class="status-dot"></span><span>No assessment</span></div>';
+  document.getElementById("config").innerHTML = "";
+  document.getElementById("findings").innerHTML =
+    '<div class="findings-section"><div class="findings-title">Note</div><div class="finding info">' +
+    esc(txt) + "</div></div>";
+  document.getElementById("output").classList.add("active");
+}
+
+function overallStatus(results, data) {
+  var sev = SEV.NONE, i, j;
+  for (i = 0; i < results.length; i++) if (results[i].sev > sev) sev = results[i].sev;
+
+  var anyLive = false;
+  for (i = 0; i < data.sets.length; i++)
+    for (j = 0; j < 2; j++) if (data.sets[i].m[j].on) anyLive = true;
+
+  // Never call a system with zero production "healthy" - the tool cannot tell
+  // night-time from a dead array.
+  if (!anyLive && sev < SEV.WARN) return { cls: "grey", label: "No production - cannot assess" };
+  if (sev >= SEV.ERROR) return { cls: "red", label: "Fault" };
+  if (sev >= SEV.WARN)  return { cls: "yellow", label: "Review" };
+  if (!anyLive)         return { cls: "grey", label: "No production - cannot assess" };
+  return { cls: "green", label: "Healthy" };
+}
+
+function render(results, data) {
+  var st = overallStatus(results, data);
+  var i, j;
+
+  document.getElementById("status").innerHTML =
+    '<div class="status-bar ' + st.cls + '"><span class="status-dot"></span><span>' + esc(st.label) + "</span></div>";
+
+  var cfg = '<div class="config-summary">';
+  for (i = 0; i < results.length; i++) {
+    var r = results[i];
+    cfg += '<div class="cfg-set">' +
+      '<div class="config-line"><span class="config-label">Set ' + r.key +
+      " (MPPT " + r.ids[0] + "&amp;" + r.ids[1] + ")</span>" +
+      '<span class="config-value">' + esc(r.cfg) + "</span></div>" +
+      '<div class="config-line"><span class="config-label">Jumper</span>' +
+      '<span class="config-value ' + jumperClass(r.jumper) + '">' + esc(r.jumper) + "</span></div>" +
+      "</div>";
+  }
+  cfg += "</div>";
+  document.getElementById("config").innerHTML = cfg;
+
+  var order = { error: 0, warning: 1, ok: 2, info: 3 };
+  var all = [];
+  for (i = 0; i < results.length; i++)
+    for (j = 0; j < results[i].findings.length; j++) all.push(results[i].findings[j]);
+  all.sort(function (a, b) { return order[a.t] - order[b.t]; });
+
+  var f = '<div class="findings-section"><div class="findings-title">Findings</div>';
+  for (i = 0; i < all.length; i++) f += '<div class="finding ' + all[i].t + '">' + esc(all[i].txt) + "</div>";
+  document.getElementById("findings").innerHTML = f + "</div>";
+
+  document.getElementById("output").classList.add("active");
+}
+
+function renderSpecNote() {
+  var spec = VARIANTS[document.getElementById("variant").value];
+  document.getElementById("specNote").innerHTML =
+    "<b>Active limits - " + spec.name + " unit.</b><br>" +
+    "Voltage: " + V_SPEC.MPPT_MIN + "-" + V_SPEC.MPPT_MAX + " V MPPT range, " +
+    V_SPEC.ABS_MAX + " V absolute input max.<br>" +
+    "Single input: " + spec.imp1 + " A Imp / " + spec.isc1 + " A ISC. " +
+    "Jumpered pair: " + spec.imp2 + " A Imp / " + spec.isc2 + " A ISC.<br>" +
+    "Jumpers are valid on <b>1-2 and 5-6 only</b>. MPPT 3 and 4 are factory-closed and cannot be jumpered - " +
+    "but both can carry their own string, which is normal.<br>" +
+    "A jumper is required when the current landing on one terminal pair exceeds " + spec.imp1 + " A Imp.";
+}
+
+/* ---------- Wire up ---------- */
+
+if (typeof document !== "undefined" && document.getElementById("form")) {
+
+  document.getElementById("variant").addEventListener("change", renderSpecNote);
+
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    document.getElementById("form").reset();
+    document.getElementById("output").classList.remove("active");
+    document.getElementById("status").innerHTML = "";
+    document.getElementById("config").innerHTML = "";
+    document.getElementById("findings").innerHTML = "";
+    window.scrollTo(0, 0);
+  });
+
+  document.getElementById("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    try {
+      var spec = VARIANTS[document.getElementById("variant").value];
+      var data = readAll();
+
+      if (data.badFields.length) {
+        return showErrors(["Could not read a number from: " + data.badFields.join(", ") + "."]);
+      }
+      if (!data.anyEntered) {
+        return showNotice("No readings entered. Enter the V and A values from Tesla One > Solar DC Inputs, then press Analyze.");
+      }
+
+      var errs = hardErrors(data, spec);
+      if (errs.length) return showErrors(errs);
+
+      var results = [];
+      for (var i = 0; i < data.sets.length; i++) {
+        var set = data.sets[i];
+        results.push(set.jumperable ? analyzeJumperable(set, spec) : analyzeIndependent(set, spec));
+      }
+      render(results, data);
+    } catch (err) {
+      showErrors(["Internal error: " + (err && err.message ? err.message : String(err)) +
+                  ". Please report this along with the values you entered."]);
+    }
+  });
+
+  renderSpecNote();
+}
+
+/* Exported for the Node test harness; harmless in the browser. */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    VARIANTS: VARIANTS, V_SPEC: V_SPEC, SEV: SEV, SETS: SETS, ON_A: ON_A,
+    analyzeJumperable: analyzeJumperable, analyzeIndependent: analyzeIndependent,
+    overallStatus: overallStatus, vTol: vTol
+  };
+}
+</script>
+</body>
+</html>

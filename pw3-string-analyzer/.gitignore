@@ -1,0 +1,17 @@
+# This project has no build step and no dependencies. Nothing here is
+# generated - these entries exist only to keep local cruft out of the repo.
+
+# Dependencies (none expected, but npm can be run by accident)
+node_modules/
+package-lock.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
