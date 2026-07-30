@@ -8,7 +8,7 @@
 <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#14161a">
-<title>Magpie â€” Note Builder</title>
+<title>Magpie — Note Builder</title>
 <style>
   :root{
     --bg: #14161a;
@@ -517,7 +517,7 @@
           <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 5"/>
           <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07L13 19"/>
         </svg>
-        <span>Loose Ends â€” things to come back to</span>
+        <span>Loose Ends — things to come back to</span>
       </div>
       <div class="reminders-header-right">
         <span class="reminders-badge" id="remindersBadge" style="display:none;"></span>
@@ -555,7 +555,7 @@
           </div>
         </div>
         <div id="bulkFields" style="display:none;">
-          <label for="bulkAddTextarea">One per line: <code>Site, what needs doing</code> â€” the task part is optional</label>
+          <label for="bulkAddTextarea">One per line: <code>Site, what needs doing</code> — the task part is optional</label>
           <textarea id="bulkAddTextarea" placeholder="Site Alpha, Follow up on permit&#10;Site Bravo&#10;Site Charlie, Check inverter status"></textarea>
           <div class="field-hint" id="bulkAddHint"></div>
         </div>
@@ -584,26 +584,26 @@
         </div>
       </div>
       <div class="top-right">
-        <div class="subtable-head full">âš¡ 120% Rule â€” MPU Avoidance</div>
+        <div class="subtable-head full">⚡ 120% Rule — MPU Avoidance</div>
         <div class="calc-compact">
           <span class="calc-label">Enclosure/Bus</span>
           <input type="number" id="enclosureRating" value="200">
-          <span class="calc-op">Ã—1.2 âˆ’</span>
+          <span class="calc-op">×1.2 −</span>
           <span class="calc-label">Breaker</span>
           <input type="number" id="mainBreaker" value="200">
           <span class="calc-op">=</span>
           <span class="calc-result-inline" id="mpuResult"></span>
         </div>
-        <button class="calc-info-toggle" id="mpuInfoToggle" type="button">What if I'm over this? <span class="chev">â–¾</span></button>
+        <button class="calc-info-toggle" id="mpuInfoToggle" type="button">What if I'm over this? <span class="chev">▾</span></button>
         <div class="calc-info-panel" id="mpuInfoPanel" style="display:none;">
           <div class="calc-info-lead">Anything above <strong id="mpuThreshold">0.0A</strong> needs one of these instead of a straight 120% pass:</div>
           <ul class="calc-info-list">
-            <li><strong>Supply-side (line-side) tap</strong> â€” connects PV ahead of the main breaker, so the 120% busbar rule doesn't apply at all.</li>
-            <li><strong>Load-side tap</strong> â€” adds the PV breaker after the main breaker; needs available busbar space rated for it.</li>
-            <li><strong>Sum of all breakers rule</strong> â€” NEC 705.12(B)(2)(3)(b) alternative: total of every breaker (existing + PV) can't exceed the busbar rating, no MSP upgrade required.</li>
-            <li><strong>MPU (Main Panel Upgrade)</strong> â€” replace/upsize the panel and main breaker so the busbar rating supports the PV breaker outright; always works, but it's the costliest and slowest path.</li>
+            <li><strong>Supply-side (line-side) tap</strong> — connects PV ahead of the main breaker, so the 120% busbar rule doesn't apply at all.</li>
+            <li><strong>Load-side tap</strong> — adds the PV breaker after the main breaker; needs available busbar space rated for it.</li>
+            <li><strong>Sum of all breakers rule</strong> — NEC 705.12(B)(2)(3)(b) alternative: total of every breaker (existing + PV) can't exceed the busbar rating, no MSP upgrade required.</li>
+            <li><strong>MPU (Main Panel Upgrade)</strong> — replace/upsize the panel and main breaker so the busbar rating supports the PV breaker outright; always works, but it's the costliest and slowest path.</li>
           </ul>
-          <div class="calc-info-reminder">Reminder: this is the <strong>MPU avoidance</strong> section â€” the first three options let you skip the upgrade when one applies; MPU is just the fallback when none of them do.</div>
+          <div class="calc-info-reminder">Reminder: this is the <strong>MPU avoidance</strong> section — the first three options let you skip the upgrade when one applies; MPU is just the fallback when none of them do.</div>
         </div>
       </div>
     </div>
@@ -632,13 +632,13 @@
       </div>
     </div>
 
-    <button class="help-toggle" id="helpToggleBtn" type="button">â„¹ï¸ How this works <span class="chev">â–¾</span></button>
+    <button class="help-toggle" id="helpToggleBtn" type="button">ℹ️ How this works <span class="chev">▾</span></button>
     <div class="help-panel" id="helpPanel" style="display:none;">
       <ul>
         <li><strong>Custom</strong> shows just your own custom lines. <strong>Advanced</strong> adds the full preset checklist + templates on top.</li>
-        <li>Drag the <strong>â ¿</strong> handle to reorder custom lines. <strong>âœï¸</strong> edits a line, <strong>Ã—</strong> deletes it (click once to arm, again to confirm).</li>
-        <li>Color tags on Loose Ends are just visual categories you pick yourself â€” there's no fixed meaning behind any color.</li>
-        <li>Everything here saves to this browser only â€” see the note near the bottom of the page for what can erase it.</li>
+        <li>Drag the <strong>⠿</strong> handle to reorder custom lines. <strong>✏️</strong> edits a line, <strong>×</strong> deletes it (click once to arm, again to confirm).</li>
+        <li>Color tags on Loose Ends are just visual categories you pick yourself — there's no fixed meaning behind any color.</li>
+        <li>Everything here saves to this browser only — see the note near the bottom of the page for what can erase it.</li>
       </ul>
     </div>
 
@@ -691,24 +691,24 @@
     </div>
 
     <!-- Additional notes -->
-    <div class="subtable-head full">âœï¸ Additional Notes</div>
+    <div class="subtable-head full">✍️ Additional Notes</div>
     <textarea id="freeNotes" placeholder="Free-text notes to append..." spellcheck="true"></textarea>
   </div>
 
   <div class="storage-notice">
-    <span class="icon">âš ï¸</span>
-    <span>This auto-saves to your browser as you go â€” initials, custom lines, reminders, and notes all stick around until you clear them. The catch: clearing cookies/site data, using a private/incognito window, or switching to a different browser or device will erase all of it.</span>
+    <span class="icon">⚠️</span>
+    <span>This auto-saves to your browser as you go — initials, custom lines, reminders, and notes all stick around until you clear them. The catch: clearing cookies/site data, using a private/incognito window, or switching to a different browser or device will erase all of it.</span>
   </div>
 
   <div class="csv-section">
-    <div class="csv-section-title">ðŸ’¾ Save &amp; Restore via Excel</div>
-    <div class="csv-hint">Since the message above means your browser data can be wiped, this is how to keep your own copy: download your custom lines as a CSV, open and edit it in Excel â€” add new lines, tweak existing ones â€” then drop the file back in below. New lines get added automatically and duplicates are skipped, so it's safe to re-upload the same file more than once.</div>
+    <div class="csv-section-title">💾 Save &amp; Restore via Excel</div>
+    <div class="csv-hint">Since the message above means your browser data can be wiped, this is how to keep your own copy: download your custom lines as a CSV, open and edit it in Excel — add new lines, tweak existing ones — then drop the file back in below. New lines get added automatically and duplicates are skipped, so it's safe to re-upload the same file more than once.</div>
     <div class="csv-row">
-      <button class="btn-ghost" id="downloadCsvBtn">â¬‡ Download CSV</button>
+      <button class="btn-ghost" id="downloadCsvBtn">⬇ Download CSV</button>
     </div>
     <div class="csv-dropzone" id="csvDropzone">
       <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-      <span class="csv-dropzone-text">â¬† Drag a CSV file here, or <span class="csv-dropzone-link" id="csvBrowseLink">click to browse</span></span>
+      <span class="csv-dropzone-text">⬆ Drag a CSV file here, or <span class="csv-dropzone-link" id="csvBrowseLink">click to browse</span></span>
     </div>
     <div class="csv-status" id="csvStatus"></div>
   </div>
@@ -901,9 +901,9 @@ const templatesEl = document.getElementById('templates');
 TEMPLATES.forEach(tmpl=>{
   const row = document.createElement('div');
   row.className = 'template-row';
-  const opts = ['<option value="">â€” Select â€”</option>'];
+  const opts = ['<option value="">— Select —</option>'];
   tmpl.options.forEach(o=> opts.push(`<option value="${o.replace(/"/g,'&quot;')}">${o}</option>`));
-  opts.push(`<option value="x">x â€” General selection</option>`);
+  opts.push(`<option value="x">x — General selection</option>`);
   row.innerHTML = `<div class="tmpl-label">${tmpl.text.replace(/\{[^}]+\}/, '<em>{'+tmpl.id+'}</em>')}</div>
                     <select data-id="${tmpl.id}">${opts.join('')}</select>`;
   templatesEl.appendChild(row);
@@ -951,13 +951,13 @@ function attachDeleteHandler(btn, onConfirm){
     e.stopPropagation();
     if(!armed){
       armed = true;
-      btn.textContent = 'âœ“';
+      btn.textContent = '✓';
       btn.classList.add('confirming');
       btn.title = 'Click again to confirm delete';
       clearTimeout(timer);
       timer = setTimeout(()=>{
         armed = false;
-        btn.textContent = 'Ã—';
+        btn.textContent = '×';
         btn.classList.remove('confirming');
         btn.title = 'Delete this line';
       }, 2500);
@@ -1047,12 +1047,12 @@ function renderAddons(){
     row.dataset.defId = def.id;
     const checked = !!state.customValues[def.id];
     if(checked) row.classList.add('ticked');
-    row.innerHTML = `<span class="drag-handle" draggable="true" title="Drag to reorder">â ¿</span>
+    row.innerHTML = `<span class="drag-handle" draggable="true" title="Drag to reorder">⠿</span>
       <span class="item-label">${def.label}</span>
       <div class="addon-actions">
         <input type="checkbox" ${checked?'checked':''}>
-        <button class="edit-btn" type="button" title="Edit this line">âœï¸</button>
-        <button class="del-btn" type="button" title="Delete this line">Ã—</button>
+        <button class="edit-btn" type="button" title="Edit this line">✏️</button>
+        <button class="del-btn" type="button" title="Delete this line">×</button>
       </div>`;
     const cb = row.querySelector('input');
     cb.addEventListener('change', ()=>{
@@ -1083,15 +1083,15 @@ function renderAddons(){
     row.dataset.defId = def.id;
     const val = state.customValues[def.id] || '';
     if(val) row.classList.add('filled');
-    const opts = ['<option value="">â€” Select â€”</option>'];
+    const opts = ['<option value="">— Select —</option>'];
     def.options.forEach(o=> opts.push(`<option value="${o.replace(/"/g,'&quot;')}" ${o===val?'selected':''}>${o}</option>`));
-    opts.push(`<option value="x" ${val==='x'?'selected':''}>x â€” General selection</option>`);
-    row.innerHTML = `<span class="drag-handle" draggable="true" title="Drag to reorder">â ¿</span>
+    opts.push(`<option value="x" ${val==='x'?'selected':''}>x — General selection</option>`);
+    row.innerHTML = `<span class="drag-handle" draggable="true" title="Drag to reorder">⠿</span>
       <div class="tmpl-label">${def.label.replace(/\{[^}]+\}/, m=>'<em>'+m+'</em>')}</div>
       <div class="addon-actions">
         <select>${opts.join('')}</select>
-        <button class="edit-btn" type="button" title="Edit this line">âœï¸</button>
-        <button class="del-btn" type="button" title="Delete this line">Ã—</button>
+        <button class="edit-btn" type="button" title="Edit this line">✏️</button>
+        <button class="del-btn" type="button" title="Delete this line">×</button>
       </div>`;
     const sel = row.querySelector('select');
     sel.addEventListener('change', ()=>{
@@ -1134,7 +1134,7 @@ function setFormType(t){
   typeFillBtn.classList.toggle('active', t==='fill');
   newLineOptionsWrap.style.display = (t==='fill') ? 'block' : 'none';
   labelHint.textContent = (t==='fill')
-    ? 'Include a {Placeholder} where the picked value should go â€” we\'ll add one at the end if you forget.'
+    ? 'Include a {Placeholder} where the picked value should go — we\'ll add one at the end if you forget.'
     : 'This will appear exactly as typed when ticked.';
 }
 typeTickBtn.addEventListener('click', ()=> setFormType('tick'));
@@ -1281,7 +1281,7 @@ function setCsvStatus(message, kind){
 document.getElementById('downloadCsvBtn').addEventListener('click', ()=>{
   const csv = buildCustomDefsCSV();
   const ok = downloadTextFile(`magpie-custom-lines-${new Date().toISOString().slice(0,10)}.csv`, csv);
-  setCsvStatus(ok ? 'Downloaded.' : 'Download failed â€” try again.', ok ? 'success' : 'error');
+  setCsvStatus(ok ? 'Downloaded.' : 'Download failed — try again.', ok ? 'success' : 'error');
 });
 
 const csvFileInput = document.getElementById('csvFileInput');
@@ -1429,7 +1429,7 @@ function renderOutput(){
   if(allItems.length === 0){
     banner.classList.remove('ready');
     outputBox.classList.add('placeholder');
-    outputBox.textContent = '(select templates below or add free-text notes â†’)';
+    outputBox.textContent = '(select templates below or add free-text notes →)';
     return;
   }
   banner.classList.add('ready');
@@ -1597,7 +1597,7 @@ function renderReminders(){
   const activeCount = reminders.filter(r=> !r.done && !r.inactive).length;
   const hasDone = reminders.some(r=> r.done);
   if(activeCount > 0){
-    remindersBadge.textContent = `â— ${activeCount} active`;
+    remindersBadge.textContent = `● ${activeCount} active`;
     remindersBadge.style.display = 'inline-block';
   } else {
     remindersBadge.style.display = 'none';
@@ -1616,7 +1616,7 @@ function renderReminders(){
   if(reminders.length === 0){
     const hint = document.createElement('div');
     hint.className = 'reminders-empty';
-    hint.textContent = 'Nothing on the list â€” add one below.';
+    hint.textContent = 'Nothing on the list — add one below.';
     remindersListEl.appendChild(hint);
     refreshBulkbar();
     return;
@@ -1628,15 +1628,15 @@ function renderReminders(){
     row.style.borderLeftColor = rem.done ? 'var(--border)' : rem.color;
     row.style.background = rem.done ? 'transparent' : hexToRgba(rem.color, 0.10);
     row.innerHTML = `
-      <span class="drag-handle" draggable="true" title="Drag to reorder">â ¿</span>
+      <span class="drag-handle" draggable="true" title="Drag to reorder">⠿</span>
       <div class="reminder-main">
         <span class="reminder-site">${rem.site || '(no site name)'}</span>
         <span class="reminder-task">${rem.task || ''}</span>
       </div>
       <div class="reminder-actions">
-        <label class="done-toggle" title="Done â€” also used to select this line for bulk delete"><input type="checkbox" ${rem.done?'checked':''}> Done</label>
-        <button class="edit-btn" type="button" title="Edit this reminder">âœï¸</button>
-        <button class="del-btn" type="button" title="Delete this line">Ã—</button>
+        <label class="done-toggle" title="Done — also used to select this line for bulk delete"><input type="checkbox" ${rem.done?'checked':''}> Done</label>
+        <button class="edit-btn" type="button" title="Edit this reminder">✏️</button>
+        <button class="del-btn" type="button" title="Delete this line">×</button>
         <label class="inactive-toggle"><input type="checkbox" ${rem.inactive?'checked':''}> Inactive</label>
       </div>`;
     const doneCb = row.querySelector('.done-toggle input[type="checkbox"]');
@@ -1767,7 +1767,7 @@ function importRemindersFromCSV(text){
   }
   setImportHint(
     added === 0
-      ? 'Nothing imported â€” no valid rows with a site name.'
+      ? 'Nothing imported — no valid rows with a site name.'
       : `Imported ${added} reminder${added===1?'':'s'}.` + (skipped ? ` Skipped ${skipped} row${skipped===1?'':'s'} with no site.` : ''),
     added === 0 ? 'error' : null
   );
@@ -1879,7 +1879,7 @@ saveReminderBtn.addEventListener('click', ()=>{
       bulkAddTextarea.value = '';
     }
     bulkAddHint.textContent = added === 0
-      ? 'Nothing added â€” each line needs at least a site name.'
+      ? 'Nothing added — each line needs at least a site name.'
       : `Added ${added} reminder${added===1?'':'s'}.` + (skipped ? ` Skipped ${skipped} line${skipped===1?'':'s'} with no site.` : '');
     return;
   }
