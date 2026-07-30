@@ -219,6 +219,7 @@ var V_SPEC = {
 };
 
 var ON_A       = 0.2;    // amps above which an input counts as powered
+var ON_V       = 5;      // volts above which an input counts as having voltage present
 var V_TOL_PCT  = 0.025;  // 2.5% proportional voltage-match tolerance
 var V_TOL_MIN  = 5;      // ...with a 5 V floor
 var BAL_RATIO  = 0.4;    // below this current ratio, call it imbalanced
@@ -273,12 +274,22 @@ function readAll() {
       if (fa.bad) badFields.push("MPPT " + id + " A");
       var entered = !fv.blank || !fa.blank;
       if (entered) anyEntered = true;
+
+      // No voltage at the input means the string is not active, full stop.
+      // Tesla One reports small negative currents (-0.4 A and the like) on idle
+      // inputs - that is sensor offset on a dead string, not a reading. Fold it
+      // to zero so it lands in the normal "unpowered" path. A negative current
+      // WITH voltage present is a real anomaly and is left intact for
+      // hardErrors() to flag.
+      var amps = fa.val;
+      if (amps < 0 && fv.val <= ON_V) amps = 0;
+
       mppts.push({
         id: id,
         v: fv.val,
-        a: fa.val,
+        a: amps,
         entered: entered,
-        on: fa.val > ON_A
+        on: amps > ON_A
       });
     }
     sets.push({ key: def.key, jumperable: def.jumperable, m: mppts,
@@ -297,8 +308,20 @@ function hardErrors(data, spec) {
       var m = set.m[i];
       if (!m.entered) continue;
 
-      if (m.v < 0 || m.a < 0) {
-        errs.push("MPPT " + m.id + ": negative value entered.");
+      if (m.v < 0) {
+        errs.push("MPPT " + m.id + ": negative voltage entered (" + fmt(m.v) + " V). Re-check the reading.");
+        continue;
+      }
+
+      // A negative current is only meaningful if there is voltage at the input.
+      // With no voltage the string simply is not active and the sign is noise -
+      // readAll() has already folded it to zero. With voltage present, current
+      // cannot flow backwards out of a PV string, so the reading is wrong or the
+      // input is miswired and nothing downstream should be trusted.
+      if (m.a < 0 && m.v > ON_V) {
+        errs.push("MPPT " + m.id + ": " + fmt(m.a) + " A with " + fmt(m.v) +
+                  " V present. Current cannot be negative on a live input - re-check the reading " +
+                  "and the string polarity at that terminal.");
         continue;
       }
 
@@ -774,7 +797,7 @@ if (typeof document !== "undefined" && document.getElementById("form")) {
 /* Exported for the Node test harness; harmless in the browser. */
 if (typeof module !== "undefined" && module.exports) {
   module.exports = {
-    VARIANTS: VARIANTS, V_SPEC: V_SPEC, SEV: SEV, SETS: SETS, ON_A: ON_A,
+    VARIANTS: VARIANTS, V_SPEC: V_SPEC, SEV: SEV, SETS: SETS, ON_A: ON_A, ON_V: ON_V,
     analyzeJumperable: analyzeJumperable, analyzeIndependent: analyzeIndependent,
     overallStatus: overallStatus, vTol: vTol, hardErrors: hardErrors,
     parseVitals: parseVitals, pasteMessage: pasteMessage, normalizePaste: normalizePaste

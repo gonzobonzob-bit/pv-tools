@@ -16,7 +16,7 @@ vm.runInContext(m[1], sandbox, { filename: 'index.html<script>' });
 const A = sandbox.module.exports;
 if (!A.analyzeJumperable) { console.error('Export failed'); process.exit(1); }
 
-const SETS = A.SETS, ON_A = A.ON_A;
+const SETS = A.SETS, ON_A = A.ON_A, ON_V = A.ON_V;
 
 // r = [[v1,a1],[v2,a2],...x6]; null entry = field left blank
 function build(r) {
@@ -26,7 +26,11 @@ function build(r) {
     for (let i = 0; i < 2; i++) {
       const id = def.ids[i], raw = r[id - 1];
       const entered = raw !== null && raw !== undefined;
-      const v = entered ? raw[0] : 0, a = entered ? raw[1] : 0;
+      const v = entered ? raw[0] : 0;
+      let a = entered ? raw[1] : 0;
+      // Mirrors readAll(): a negative current with no voltage at the input is an
+      // idle string, not a reading. Keep this in step with index.html.
+      if (a < 0 && v <= ON_V) a = 0;
       mppts.push({ id, v, a, entered, on: a > ON_A });
     }
     sets.push({ key: def.key, jumperable: def.jumperable, m: mppts,
@@ -106,6 +110,12 @@ const CASES = [
   { n: '15A variant: 28A jumpered pair is legal (26A would fail on 13A unit)',
     r: [[400,14],[400,14],N,N,N,N], variant: '15', expect: 'yellow',
     note: '28A < 30A dual Imp, but > 15A single -> verify jumper' },
+  { n: 'Night with negative sensor offset on every input',
+    r: [[0,-0.4],[0,-0.4],[0,-0.3],[0,-0.2],[0,-0.4],[0,-0.4]], expect: 'grey',
+    note: 'no voltage = string not active; the minus sign is offset, not a fault' },
+  { n: 'Live array with one idle input reading 0V / -0.3A',
+    r: [[400,8],[0,-0.3],N,N,N,N], expect: 'green', jumper: 'A=Not required',
+    note: 'the -0.3A leg must read as plain unpowered, not as a dead-string warning' },
 ];
 
 let pass = 0, fail = 0;
@@ -122,6 +132,44 @@ for (const c of CASES) {
 }
 console.log('='.repeat(78));
 console.log(`analysis matrix: ${pass} passed, ${fail} failed, ${CASES.length} total`);
+
+/* ---------- Negative-value rule ----------
+   No voltage at the input means the string is not active, whatever sign the
+   current carries. A negative current only matters when voltage IS present. */
+
+const NEG_CASES = [
+  { n: 'No voltage, negative current -> not a hard error',
+    r: [[0, -0.4], N, N, N, N, N], errs: 0 },
+  { n: 'Blank voltage field, negative current -> not a hard error',
+    r: [[0, -2.5], N, N, N, N, N], errs: 0,
+    note: 'a blank V field reads as 0 through readAll()' },
+  { n: 'Trace voltage under the 5V present threshold, negative current -> not a hard error',
+    r: [[3, -0.4], N, N, N, N, N], errs: 0 },
+  { n: 'Voltage present with negative current -> hard error (the real concern)',
+    r: [[400, -0.4], N, N, N, N, N], errs: 1, match: /negative/i },
+  { n: 'Low but real voltage with negative current -> hard error',
+    r: [[80, -1.2], N, N, N, N, N], errs: 1, match: /negative/i },
+  { n: 'Negative voltage is still a hard error on its own',
+    r: [[-400, 8], N, N, N, N, N], errs: 1, match: /negative voltage/i },
+  { n: 'Negative current is folded, so it cannot mask a real overcurrent elsewhere',
+    r: [[0, -0.4], N, N, N, [400, 40], N], errs: 1, match: /ISC ceiling/i },
+];
+
+console.log('\nPW3 negative-value rule\n' + '='.repeat(78));
+for (const c of NEG_CASES) {
+  let problems = [];
+  try {
+    const errs = A.hardErrors(build(c.r), A.VARIANTS['13']);
+    if (errs.length !== c.errs) problems.push(`${errs.length} errors, want ${c.errs}: ${errs.join(' | ')}`);
+    if (c.match && !errs.some(e => c.match.test(e))) problems.push(`no error matching ${c.match}`);
+  } catch (e) { problems.push('THREW: ' + e.message); }
+
+  const ok = problems.length === 0;
+  ok ? pass++ : fail++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${c.n}`);
+  problems.forEach(p => console.log(`      ${p}`));
+  if (c.note) console.log(`      note: ${c.note}`);
+}
 
 /* ---------- Paste parser (v4.1) ---------- */
 
@@ -268,7 +316,7 @@ for (const c of PASTE_CASES) {
   if (c.note) console.log(`      note: ${c.note}`);
 }
 
-const TOTAL = CASES.length + PASTE_CASES.length;
+const TOTAL = CASES.length + NEG_CASES.length + PASTE_CASES.length;
 console.log('='.repeat(78));
 console.log(`${pass} passed, ${fail} failed, ${TOTAL} total`);
 

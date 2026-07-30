@@ -130,6 +130,14 @@ have split it. v3.1 called this "Likely IN" and shrugged; v4 calls it
 - Voltage above 550 V → equipment damage risk, regardless of current
 - Voc present with zero current → string is live but nothing is drawing from it
 
+**Negative current readings:** with **no voltage** at the input the string is not active,
+whatever sign the current carries — Tesla One reports small negative values (`-0.4A` and
+similar) as sensor offset on idle inputs, so they are folded to zero and the input reads as
+plain unpowered. A negative current is only flagged when **voltage is present**, because
+current cannot flow backwards out of a live string: that reading is either wrong or the
+terminal is miswired, and the tool stops rather than analyze it. Negative *voltage* is
+always rejected.
+
 **Cannot determine — and v4 says so instead of guessing:**
 
 > A working jumpered pair and two well-matched independent strings produce **identical**
