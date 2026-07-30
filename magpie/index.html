@@ -1436,7 +1436,7 @@ function renderOutput(){
   outputBox.classList.remove('placeholder');
   const dateStr = formatDateShort(dateInput.value);
   const initials = initialsInput.value.trim();
-  outputBox.textContent = `${dateStr} ${initials}: ${allItems.join(', ')} // `;
+  outputBox.textContent = `${dateStr} ${initials}: ${allItems.join(', ')} -- `;
 }
 
 // ---- Copy / Clear ----
