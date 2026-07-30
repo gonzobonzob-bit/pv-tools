@@ -2,12 +2,61 @@
 
 A single-file field diagnostic for Tesla Powerwall 3 MPPT configuration.
 
-A tech reads the six DC voltage/current pairs off **Tesla One → Solar DC Inputs**, types
-them in, and the tool flags overcurrent, overvoltage, missing jumpers, dead strings, and
-imbalance — and tells you what it *can't* determine from readings alone.
+A tech reads the six DC voltage/current pairs off **Tesla One → Solar DC Inputs** — pasting
+the screen or typing them in — and the tool flags overcurrent, overvoltage, missing
+jumpers, dead strings, and imbalance, and tells you what it *can't* determine from readings
+alone.
 
 No build step, no dependencies, no network calls. Open `index.html` in any browser,
 including on a phone at the job site.
+
+---
+
+## Paste from Tesla One
+
+Typing twelve numbers on a phone at a job site is how transcription errors happen. Copy the
+vitals screen instead, paste it into the box at the top, and the six V/A pairs drop into the
+fields.
+
+It parses on paste automatically; **Fill fields** re-parses if you typed or pasted
+awkwardly, and **Clear paste** empties the box without touching the form.
+
+Paste the whole screen — `AC Vitals`, `Battery`, `Version` and anything else are ignored.
+The parser only needs the `Solar DC Inputs` block:
+
+```
+Solar DC Inputs
+MPPT 1
+100V / 0.25A
+MPPT 2
+270V / 0.3A
+...
+```
+
+Accepted variations:
+
+- V/A pair on the line after the label, on the **same** line (`MPPT 1  100V / 0.25A`), or
+  separated by blank lines
+- `MPPT 1`, `mppt 1`, `MPPT1`
+- Integers, decimals, negatives, and **signed zero** — `-0A` appears in real captures and
+  parses to `0`
+- Non-breaking spaces, unicode minus, en/em dashes, tabs
+
+**It never fills partially in silence.** After parsing you get a count and, if anything is
+missing, the specific MPPTs it could not find — those fields are left as they were. If the
+paste contains `Inverter State` or `Inverter Mode`, both show as a chip next to the status,
+because an inverter reading `Active` with all MPPTs near zero means something very different
+from one that is off.
+
+Two deliberate properties:
+
+- **Nothing is analyzed automatically.** Paste populates the fields and stops. You review
+  the numbers, then press Analyze — the parser is an input path, not a shortcut past your
+  own eyes.
+- **Parsing is section-scoped.** Each `MPPT n` marker is searched only as far as the next
+  marker. A single global regex would skip an MPPT whose V/A line is missing and hand it the
+  *following* MPPT's numbers — silently mislabelling a healthy input as a fault. There is a
+  test for exactly this.
 
 ---
 
@@ -117,13 +166,25 @@ See [`SPECS.md`](SPECS.md) for every figure with its Tesla source URL.
 node test.js
 ```
 
-Extracts the `<script>` block from `index.html`, evaluates it headlessly, and runs a
-20-case scenario matrix plus an 8,100-combination fuzz sweep asserting no input can
-throw. Current status: **24/24 passing, 0 crashes.**
+Extracts the `<script>` block from `index.html`, evaluates it headlessly, and runs two
+scenario matrices plus two fuzz sweeps asserting no input can throw. Current status:
+**35/35 passing, 0 crashes.**
 
-The matrix covers every regression above, both hardware variants, the field-confirmed
-jumper cases, and the boundary cases — night vs. dead array, blank form, knife-edge
-current ratios, severity ordering.
+| Suite | Cases | Fuzz |
+|---|---|---|
+| Analysis matrix | 24 | 8,100 V/A combinations |
+| Paste parser | 11 | 10,648 fragment combinations |
+
+The analysis matrix covers every regression above, both hardware variants, the
+field-confirmed jumper cases, and the boundary cases — night vs. dead array, blank form,
+knife-edge current ratios, severity ordering.
+
+The paste matrix uses a real capture from a live unit as its primary fixture, and covers
+the missing-entry case (label present, V/A absent — must not borrow the next MPPT's
+numbers), signed zero, same-line and lowercase layouts, empty and garbage input, and
+`AC Voltage (L-L) 231.4V` not being mistaken for an MPPT reading. The paste fuzz also
+asserts no parsed value is ever `NaN` or `-0`, and that a zero-match parse always reports
+an error message rather than an empty one.
 
 ---
 

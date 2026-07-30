@@ -20,6 +20,7 @@
 --green:#3fbd72;--green-bg:#15261c;--green-line:#234a32;
 --red:#ef5b52;--red-bg:#2c1816;--red-line:#4a2723;
 --amber:#e3a23a;--amber-bg:#2c2210;--amber-line:#4a3a1a;
+--mono:'Courier New',Courier,monospace;
 --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif
 }
 body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5;padding:12px;padding-bottom:48px;-webkit-text-size-adjust:100%}
@@ -78,7 +79,20 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
 .diagnostic-note b{color:var(--ink)}
 .footer{font-size:10px;color:var(--muted);text-align:center;margin-top:18px;line-height:1.6}
 .footer .credit{display:inline-block;margin-top:6px;color:var(--muted);opacity:.75;letter-spacing:.04em}
-@media (max-width:400px){.mppt-pair{grid-template-columns:1fr}}
+.paste-label{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:5px}
+.paste-hint{font-size:11px;color:var(--muted);line-height:1.45;margin-bottom:10px}
+#pasteBox{width:100%;font-family:var(--mono);font-size:12.5px;line-height:1.45;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);resize:vertical;min-height:84px}
+#pasteBox:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(245,130,31,.25)}
+.paste-actions{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
+.fill-btn{background:var(--orange);color:#14161a}
+.fill-btn:active{background:var(--orange-light)}
+.paste-msg{font-size:12.5px;line-height:1.5;margin-top:11px;padding:9px 11px;border-radius:6px;border-left:3px solid}
+.paste-msg.ok{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+.paste-msg.warn{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+.paste-msg.err{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.paste-chip{display:inline-block;margin-top:9px;margin-right:6px;font-size:11px;color:var(--muted);background:var(--card-alt);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.paste-chip b{color:var(--ink);font-weight:600}
+@media (max-width:400px){.mppt-pair{grid-template-columns:1fr}.paste-actions{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -86,7 +100,7 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
 
   <div class="header">
     <h1>PW3 String Analyzer</h1>
-    <p>Tesla Powerwall 3 &mdash; MPPT configuration diagnostic &middot; v4.0</p>
+    <p>Tesla Powerwall 3 &mdash; MPPT configuration diagnostic &middot; v4.1</p>
   </div>
 
   <div class="card">
@@ -98,6 +112,17 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
       </select>
     </div>
     <div class="variant-hint">Tesla ships two PW3 variants with different PV input current ratings. Check the label in the enclosure. Getting this wrong changes every current verdict below.</div>
+  </div>
+
+  <div class="card">
+    <div class="paste-label">Paste from Tesla One</div>
+    <div class="paste-hint">Copy the vitals screen and paste it here instead of typing twelve numbers. The six V/A pairs fill the fields below. Nothing is analyzed automatically &mdash; check the values, then press Analyze.</div>
+    <textarea id="pasteBox" rows="4" spellcheck="false" autocomplete="off" placeholder="Solar DC Inputs&#10;MPPT 1&#10;380V / 9.5A&#10;..."></textarea>
+    <div class="paste-actions">
+      <button type="button" class="fill-btn" id="fillBtn">Fill fields</button>
+      <button type="button" class="reset-btn" id="pasteClearBtn">Clear paste</button>
+    </div>
+    <div id="pasteStatus"></div>
   </div>
 
   <div class="card">
@@ -285,6 +310,87 @@ function hardErrors(data, spec) {
     }
   }
   return errs;
+}
+
+/* ---------- Paste parser (Tesla One vitals) ----------
+   Input path only - it writes into the same fields a tech would type into, and
+   nothing downstream knows or cares where the numbers came from.
+
+   Deliberately SECTION-SCOPED: each "MPPT n" marker is searched only as far as
+   the NEXT marker. A single loose global regex would happily skip over an MPPT
+   whose V/A line is missing and hand it the following MPPT's numbers, which is
+   the one failure mode that could silently mislabel a healthy input as a fault. */
+
+function normalizePaste(raw) {
+  var s = (raw === null || raw === undefined) ? "" : String(raw);
+  s = s.replace(/\r\n?/g, "\n");                // CRLF / bare CR -> LF
+  s = s.replace(/ /g, " ");                // non-breaking space
+  s = s.replace(/[−–—]/g, "-");  // unicode minus, en dash, em dash
+  s = s.replace(/\t/g, " ");                    // tabs -> spaces
+  return s;
+}
+
+// "-0A" is a real Tesla One reading. Number("-0") is -0, which stringifies as
+// "-0" in the field and reads as negative-looking; fold it to a plain 0 so the
+// negative-value validator in hardErrors() is not tripped by a legitimate zero.
+function foldZero(n) { return n === 0 ? 0 : n; }
+
+function grabLabelled(text, label) {
+  var re = new RegExp(label.replace(/ /g, "\\s+") + "\\s*:?\\s*([^\\n]*)", "i");
+  var m = text.match(re);
+  if (!m) return null;
+  var v = m[1].replace(/\s+/g, " ").trim();
+  return v === "" ? null : v;
+}
+
+function parseVitals(raw) {
+  var text = normalizePaste(raw);
+  // (?![0-9]) so "MPPT 12" is not read as MPPT 1.
+  var markRe = /mppt\s*([1-6])(?![0-9])/gi;
+  // Accepts integers, decimals, leading minus and signed zero on both sides.
+  var vaRe = /(-?[0-9]+(?:\.[0-9]+)?)\s*V\s*\/\s*(-?[0-9]+(?:\.[0-9]+)?)\s*A/i;
+  var marks = [], values = {}, matched = [], missing = [];
+  var m, i, id, seg, hit, n, to;
+
+  while ((m = markRe.exec(text)) !== null) {
+    marks.push({ id: Number(m[1]), at: m.index, end: m.index + m[0].length });
+    if (markRe.lastIndex === m.index) markRe.lastIndex++;
+  }
+
+  for (i = 0; i < marks.length; i++) {
+    id = marks[i].id;
+    if (values[id]) continue;                   // first occurrence of an MPPT wins
+    to = (i + 1 < marks.length) ? marks[i + 1].at : text.length;
+    seg = text.slice(marks[i].end, to);
+    hit = seg.match(vaRe);
+    if (hit) values[id] = { v: foldZero(Number(hit[1])), a: foldZero(Number(hit[2])) };
+  }
+
+  for (n = 1; n <= 6; n++) {
+    if (values[n]) matched.push(n); else missing.push(n);
+  }
+
+  return {
+    values: values,
+    matched: matched,
+    missing: missing,
+    count: matched.length,
+    inverterState: grabLabelled(text, "Inverter State"),
+    inverterMode: grabLabelled(text, "Inverter Mode")
+  };
+}
+
+function pasteMessage(res) {
+  if (res.count === 0) {
+    return { cls: "err", text: "No MPPT readings found. Paste the Solar DC Inputs section from " +
+      "Tesla One - it should contain lines like \"MPPT 1\" followed by \"380V / 9.5A\"." };
+  }
+  if (res.count === 6) {
+    return { cls: "ok", text: "All 6 MPPTs matched. Check the values below, then press Analyze." };
+  }
+  return { cls: "warn", text: "Matched " + res.count + " of 6. NOT found: MPPT " +
+    res.missing.join(", ") + " - those fields were left as they were. Enter them by hand, " +
+    "or re-copy the full Solar DC Inputs section." };
 }
 
 /* ---------- Per-set analysis ---------- */
@@ -579,7 +685,59 @@ if (typeof document !== "undefined" && document.getElementById("form")) {
     document.getElementById("status").innerHTML = "";
     document.getElementById("config").innerHTML = "";
     document.getElementById("findings").innerHTML = "";
+    // The paste text itself is left alone - that is what "Clear paste" is for -
+    // but a stale "All 6 MPPTs matched" over an emptied form would be a lie.
+    document.getElementById("pasteStatus").innerHTML = "";
     window.scrollTo(0, 0);
+  });
+
+  function renderPasteStatus(res) {
+    var el = document.getElementById("pasteStatus");
+    if (!res) { el.innerHTML = ""; return; }
+    var msg = pasteMessage(res);
+    var h = '<div class="paste-msg ' + msg.cls + '">' + esc(msg.text) + "</div>";
+    var chips = "";
+    if (res.inverterState) {
+      chips += '<span class="paste-chip">Inverter <b>' + esc(res.inverterState) + "</b></span>";
+    }
+    if (res.inverterMode) {
+      chips += '<span class="paste-chip">Mode <b>' + esc(res.inverterMode) + "</b></span>";
+    }
+    if (chips) h += "<div>" + chips + "</div>";
+    el.innerHTML = h;
+  }
+
+  function fillFromPaste() {
+    var res, n;
+    try {
+      res = parseVitals(document.getElementById("pasteBox").value);
+    } catch (err) {
+      document.getElementById("pasteStatus").innerHTML =
+        '<div class="paste-msg err">Could not read that paste: ' +
+        esc(err && err.message ? err.message : String(err)) + "</div>";
+      return;
+    }
+    // Only fields with a parsed reading are written. Anything not found keeps
+    // whatever was there - no silent partial overwrite.
+    for (n = 1; n <= 6; n++) {
+      if (res.values[n]) {
+        document.getElementById("m" + n + "v").value = String(res.values[n].v);
+        document.getElementById("m" + n + "a").value = String(res.values[n].a);
+      }
+    }
+    renderPasteStatus(res);
+  }
+
+  document.getElementById("fillBtn").addEventListener("click", fillFromPaste);
+
+  document.getElementById("pasteBox").addEventListener("paste", function () {
+    // Let the browser commit the pasted text before reading .value.
+    window.setTimeout(fillFromPaste, 0);
+  });
+
+  document.getElementById("pasteClearBtn").addEventListener("click", function () {
+    document.getElementById("pasteBox").value = "";
+    renderPasteStatus(null);
   });
 
   document.getElementById("form").addEventListener("submit", function (e) {
@@ -618,7 +776,8 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     VARIANTS: VARIANTS, V_SPEC: V_SPEC, SEV: SEV, SETS: SETS, ON_A: ON_A,
     analyzeJumperable: analyzeJumperable, analyzeIndependent: analyzeIndependent,
-    overallStatus: overallStatus, vTol: vTol
+    overallStatus: overallStatus, vTol: vTol, hardErrors: hardErrors,
+    parseVitals: parseVitals, pasteMessage: pasteMessage, normalizePaste: normalizePaste
   };
 }
 </script>

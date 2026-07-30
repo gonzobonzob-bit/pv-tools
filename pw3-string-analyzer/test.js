@@ -109,7 +109,7 @@ const CASES = [
 ];
 
 let pass = 0, fail = 0;
-console.log('PW3 String Analyzer v4.0 - test matrix\n' + '='.repeat(78));
+console.log('PW3 String Analyzer v4.1 - test matrix\n' + '='.repeat(78));
 for (const c of CASES) {
   let got, err = null, jum = null;
   try { const o = run(c.r, c.variant); got = o.status.cls; jum = o.results.map(x => x.key + '=' + x.jumper).join(' '); }
@@ -121,7 +121,156 @@ for (const c of CASES) {
   if (c.note) console.log(`      note: ${c.note}`);
 }
 console.log('='.repeat(78));
-console.log(`${pass} passed, ${fail} failed, ${CASES.length} total`);
+console.log(`analysis matrix: ${pass} passed, ${fail} failed, ${CASES.length} total`);
+
+/* ---------- Paste parser (v4.1) ---------- */
+
+// The real capture from a live unit. Primary fixture.
+const REAL = [
+  'AC Vitals',
+  'Max Current Output',
+  'Inverter State\tActive',
+  'Inverter Mode\tGrid Following',
+  'Frequency\t59.98Hz',
+  'AC Voltage (L-L)\t231.4V',
+  'Line 1\t116.2V',
+  'Line 2\t115.2V',
+  'Solar DC Inputs',
+  'MPPT 1',
+  '100V / 0.25A',
+  'MPPT 2',
+  '270V / 0.3A',
+  'MPPT 3',
+  '0V / 0.05A',
+  'MPPT 4',
+  '0V / -0A',
+  'MPPT 5',
+  '0V / -0A',
+  'MPPT 6',
+  '0V / -0A',
+  'Battery',
+  'Battery State\tActive',
+  'DCDC State (A/B)\t(Active / Active)',
+  'Powerwall Switch\tOn',
+  'Version\t26.18.3 184289b9',
+].join('\n');
+
+const DC_ONLY = [
+  'Solar DC Inputs',
+  'MPPT 1', '100V / 0.25A',
+  'MPPT 2', '270V / 0.3A',
+  'MPPT 3', '0V / 0.05A',
+  'MPPT 4', '0V / -0A',
+  'MPPT 5', '0V / -0A',
+  'MPPT 6', '0V / -0A',
+].join('\n');
+
+const PASTE_CASES = [
+  { n: 'Full real Tesla One capture -> 6 of 6',
+    in: REAL, count: 6, missing: [],
+    vals: { 1: [100, 0.25], 2: [270, 0.3], 3: [0, 0.05], 4: [0, 0], 5: [0, 0], 6: [0, 0] },
+    note: 'primary fixture - AC Vitals and Battery sections must be ignored' },
+
+  { n: 'Solar DC Inputs section only, no AC/Battery -> 6 of 6',
+    in: DC_ONLY, count: 6, missing: [],
+    vals: { 1: [100, 0.25], 6: [0, 0] } },
+
+  { n: 'Only MPPT 1 and 2 present -> 2 matched, 3-6 reported missing',
+    in: 'Solar DC Inputs\nMPPT 1\n380V / 9.5A\nMPPT 2\n379V / 9.4A',
+    count: 2, missing: [3, 4, 5, 6], vals: { 1: [380, 9.5], 2: [379, 9.4] } },
+
+  { n: 'MPPT 3 label present but its V/A line missing -> must NOT borrow MPPT 4',
+    in: 'Solar DC Inputs\nMPPT 1\n380V / 9.5A\nMPPT 2\n380V / 9.5A\nMPPT 3\nMPPT 4\n120V / 1.5A\nMPPT 5\n0V / 0A\nMPPT 6\n0V / 0A',
+    count: 5, missing: [3], vals: { 4: [120, 1.5] },
+    note: 'the one failure a loose global regex would cause' },
+
+  { n: 'Signed zero "-0A" parses to 0 and does not trip the negative validator',
+    in: 'MPPT 1\n0V / -0A', count: 1, missing: [2, 3, 4, 5, 6],
+    vals: { 1: [0, 0] }, noNegativeError: true },
+
+  { n: 'Same-line format "MPPT 1  100V / 0.25A" -> matched',
+    in: 'Solar DC Inputs\nMPPT 1  100V / 0.25A\nmppt 2\t270V / 0.3A\nMPPT3 0V / 0A',
+    count: 3, missing: [4, 5, 6], vals: { 1: [100, 0.25], 2: [270, 0.3], 3: [0, 0] },
+    note: 'also covers lowercase "mppt 2" and no-space "MPPT3"' },
+
+  { n: 'Empty string -> 0 matched, clean message, no throw',
+    in: '', count: 0, missing: [1, 2, 3, 4, 5, 6], msgCls: 'err' },
+
+  { n: 'Pure garbage -> 0 matched, clean message, no throw',
+    in: 'lorem ipsum 42 !!!   <script>x</script> ////',
+    count: 0, missing: [1, 2, 3, 4, 5, 6], msgCls: 'err' },
+
+  { n: 'AC Voltage (L-L) 231.4V is not mistaken for an MPPT reading',
+    in: 'AC Vitals\nAC Voltage (L-L)\t231.4V\nLine 1\t116.2V\nFrequency\t59.98Hz',
+    count: 0, missing: [1, 2, 3, 4, 5, 6], msgCls: 'err',
+    note: 'has a V value but no "/ <n>A" after it' },
+
+  { n: 'Unicode minus and non-breaking spaces normalize',
+    in: 'MPPT 1 \n0V / −0A', count: 1, missing: [2, 3, 4, 5, 6],
+    vals: { 1: [0, 0] } },
+
+  { n: 'Inverter State / Mode surface as context',
+    in: REAL, count: 6, missing: [],
+    state: 'Active', mode: 'Grid Following' },
+];
+
+console.log('\nPW3 paste parser - test matrix\n' + '='.repeat(78));
+for (const c of PASTE_CASES) {
+  let got, err = null, problems = [];
+  try {
+    got = A.parseVitals(c.in);
+
+    if (got.count !== c.count) problems.push(`count ${got.count} != ${c.count}`);
+    if (c.missing && got.missing.join(',') !== c.missing.join(','))
+      problems.push(`missing [${got.missing}] != [${c.missing}]`);
+
+    for (const id in (c.vals || {})) {
+      const want = c.vals[id], have = got.values[id];
+      if (!have) { problems.push(`MPPT ${id} not parsed`); continue; }
+      if (have.v !== want[0] || have.a !== want[1])
+        problems.push(`MPPT ${id} = ${have.v}V/${have.a}A, want ${want[0]}V/${want[1]}A`);
+      // Signed zero must fold: Object.is catches -0 slipping through as -0.
+      if (want[1] === 0 && Object.is(have.a, -0)) problems.push(`MPPT ${id} A is -0, not 0`);
+    }
+
+    if (c.msgCls) {
+      const msg = A.pasteMessage(got);
+      if (msg.cls !== c.msgCls) problems.push(`msg cls ${msg.cls} != ${c.msgCls}`);
+      if (!msg.text || !msg.text.length) problems.push('empty message');
+    }
+    // Partial matches must name the missing MPPTs explicitly.
+    if (got.count > 0 && got.count < 6) {
+      const msg = A.pasteMessage(got);
+      for (const id of got.missing)
+        if (msg.text.indexOf(String(id)) === -1) problems.push(`message omits missing MPPT ${id}`);
+    }
+
+    if (c.noNegativeError) {
+      // Feed the parsed values through the real validator.
+      const r = [];
+      for (let i = 1; i <= 6; i++) r.push(got.values[i] ? [got.values[i].v, got.values[i].a] : null);
+      const errs = A.hardErrors(build(r), A.VARIANTS['13']);
+      const neg = errs.filter(e => /negative/i.test(e));
+      if (neg.length) problems.push(`negative-value error raised: ${neg[0]}`);
+    }
+
+    if (c.state && got.inverterState !== c.state)
+      problems.push(`inverterState "${got.inverterState}" != "${c.state}"`);
+    if (c.mode && got.inverterMode !== c.mode)
+      problems.push(`inverterMode "${got.inverterMode}" != "${c.mode}"`);
+
+  } catch (e) { err = e; problems.push('THREW: ' + e.message); }
+
+  const ok = !err && problems.length === 0;
+  ok ? pass++ : fail++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${c.n}`);
+  if (!ok) problems.forEach(p => console.log(`      ${p}`));
+  if (c.note) console.log(`      note: ${c.note}`);
+}
+
+const TOTAL = CASES.length + PASTE_CASES.length;
+console.log('='.repeat(78));
+console.log(`${pass} passed, ${fail} failed, ${TOTAL} total`);
 
 // Fuzz: no input combination may throw.
 let crashes = 0, checked = 0;
@@ -133,4 +282,30 @@ for (const v1 of vs) for (const a1 of as) for (const v2 of vs) for (const a2 of 
   catch (e) { crashes++; if (crashes < 4) console.log(`CRASH ${v1}/${a1} ${v2}/${a2}: ${e.message}`); }
 }
 console.log(`\nFuzz: ${checked} combinations, ${crashes} crashes`);
-process.exit(fail || crashes ? 1 : 0);
+
+// Paste fuzz: no input may throw, and a parse that finds nothing must say so.
+const FRAGS = ['MPPT', 'MPPT 1', 'mppt7', 'MPPT 12', '0V', '/ -0A', '380V / 9.5A',
+  'V / A', 'AC Voltage (L-L)\t231.4V', '', '\n', '\t\t', '   ', '−0', 'NaN',
+  'Inverter State', '</script>', '%%%', '1.2.3', '-', 'V/A', '999V / 999A'];
+let pCrash = 0, pChecked = 0, pBadMsg = 0;
+for (const a of FRAGS) for (const b of FRAGS) for (const c of FRAGS) {
+  const input = a + '\n' + b + ' ' + c;
+  pChecked++;
+  try {
+    const r = A.parseVitals(input);
+    const msg = A.pasteMessage(r);
+    if (!msg || !msg.text || !msg.cls) pBadMsg++;
+    if (r.count === 0 && msg.cls !== 'err') pBadMsg++;
+    // No parsed current may be -0, and no value may be NaN.
+    for (const id in r.values) {
+      if (Object.is(r.values[id].a, -0) || Object.is(r.values[id].v, -0)) pBadMsg++;
+      if (isNaN(r.values[id].a) || isNaN(r.values[id].v)) pBadMsg++;
+    }
+  } catch (e) {
+    pCrash++;
+    if (pCrash < 4) console.log(`PASTE CRASH on ${JSON.stringify(input)}: ${e.message}`);
+  }
+}
+console.log(`Paste fuzz: ${pChecked} combinations, ${pCrash} crashes, ${pBadMsg} bad messages`);
+
+process.exit(fail || crashes || pCrash || pBadMsg ? 1 : 0);
