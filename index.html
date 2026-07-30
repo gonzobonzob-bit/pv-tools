@@ -7,81 +7,98 @@
 <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#14161a">
 <title>PV Tools</title>
 <style>
-  :root {
-    --bg: #fbfbfa; --fg: #1a1a18; --muted: #6b6b66;
-    --card: #ffffff; --line: #e4e4e0; --accent: #b4551f;
+  :root{
+    --bg:#14161a;
+    --card:#1b1e24;
+    --card-alt:#20232a;
+    --line:#2a2e36;
+    --ink:#eef0f3;
+    --muted:#9aa0ab;
+    --orange:#f5821f;
+    --orange-light:#ff9a3d;
+    --orange-bg:#2e2010;
+    --mono:'Courier New',Courier,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #17171a; --fg: #e8e8e4; --muted: #96968f;
-      --card: #1f1f23; --line: #2e2e34; --accent: #e08a4c;
-    }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--bg);color:var(--ink);font-family:var(--sans);
+    line-height:1.55;padding:24px 16px 56px;-webkit-text-size-adjust:100%;
   }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 2.5rem 1.25rem 4rem;
-    background: var(--bg); color: var(--fg);
-    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    -webkit-text-size-adjust: 100%;
+  .container{max-width:640px;margin:0 auto}
+  .header{padding:12px 0 14px;border-bottom:2px solid var(--line);margin-bottom:22px}
+  .header h1{font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .header h1 .dot{color:var(--orange)}
+  .header p{font-size:12px;color:var(--muted);margin-top:3px}
+  .tools{list-style:none;display:grid;gap:12px}
+  a.tool{
+    display:block;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:15px 16px;text-decoration:none;color:inherit;
+    border-left:3px solid var(--orange);
   }
-  main { max-width: 46rem; margin: 0 auto; }
-  h1 { font-size: 1.5rem; margin: 0 0 .35rem; letter-spacing: -0.01em; }
-  .sub { color: var(--muted); margin: 0 0 2.25rem; font-size: .95rem; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .85rem; }
-  a.tool {
-    display: block; padding: 1.1rem 1.25rem;
-    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-    text-decoration: none; color: inherit;
+  a.tool:hover{background:var(--card-alt)}
+  a.tool:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+  .tool-name{font-size:15px;font-weight:600;letter-spacing:-.005em}
+  .tool-name .arrow{color:var(--orange);font-weight:400}
+  .tool-desc{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .note{
+    margin-top:22px;background:var(--card);border:1px solid var(--line);
+    border-radius:8px;padding:13px 14px;font-size:11px;color:var(--muted);line-height:1.65;
   }
-  a.tool:hover, a.tool:focus-visible { border-color: var(--accent); }
-  a.tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .name { font-weight: 600; }
-  .name .arrow { color: var(--accent); }
-  .desc { color: var(--muted); font-size: .9rem; margin-top: .2rem; }
-  footer {
-    margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line);
-    color: var(--muted); font-size: .82rem;
-  }
-  footer p { margin: 0 0 .5rem; }
+  .note+.note{margin-top:10px}
+  .note b{color:var(--ink)}
+  .note code{font-family:var(--mono);color:var(--orange-light);font-size:.95em}
+  .footer{font-size:10px;color:var(--muted);opacity:.75;text-align:center;margin-top:22px;line-height:1.6}
+  @media (max-width:400px){body{padding:18px 12px 48px}}
 </style>
 </head>
 <body>
-<main>
-  <h1>PV Tools</h1>
-  <p class="sub">Internal field and review tools. No build step, no dependencies, no network calls.</p>
+<div class="container">
 
-  <ul>
+  <div class="header">
+    <h1>PV Tools<span class="dot">.</span></h1>
+    <p>Internal field and review tools &mdash; no build step, no dependencies, no network calls.</p>
+  </div>
+
+  <ul class="tools">
     <li>
       <a class="tool" href="pw3-string-analyzer/">
-        <div class="name">PW3 String Analyzer <span class="arrow">&rarr;</span></div>
-        <div class="desc">Tesla Powerwall 3 MPPT string diagnostic. Reads the six DC voltage/current
-        pairs and flags overcurrent, overvoltage, missing or faulty jumpers, dead strings,
-        and imbalance.</div>
+        <div class="tool-name">PW3 String Analyzer <span class="arrow">&rarr;</span></div>
+        <div class="tool-desc">Tesla Powerwall 3 MPPT string diagnostic. Reads the six DC
+        voltage/current pairs and flags overcurrent, overvoltage, missing or faulty jumpers,
+        dead strings, and imbalance.</div>
       </a>
     </li>
     <li>
       <a class="tool" href="lynx/">
-        <div class="name">Lynx <span class="arrow">&rarr;</span></div>
-        <div class="desc">PV CT data reviewer. Loads exported graph data for site review.</div>
+        <div class="tool-name">Lynx <span class="arrow">&rarr;</span></div>
+        <div class="tool-desc">PV CT data reviewer. Loads exported graph data for site review,
+        with microinverter troubleshooting.</div>
       </a>
     </li>
     <li>
       <a class="tool" href="magpie/">
-        <div class="name">Magpie <span class="arrow">&rarr;</span></div>
-        <div class="desc">Note builder.</div>
+        <div class="tool-name">Magpie <span class="arrow">&rarr;</span></div>
+        <div class="tool-desc">Note builder.</div>
       </a>
     </li>
   </ul>
 
-  <footer>
-    <p>Each tool is a single self-contained page and also works offline from a saved
-    local copy &mdash; useful on job sites with no signal. On mobile, open a tool and
-    use <strong>Add to Home Screen</strong>.</p>
-    <p>These pages carry <code>noindex</code> so they stay out of search results, but the
-    URL is unlisted, not secret. Do not enter customer names, addresses, or site data.</p>
-  </footer>
-</main>
+  <div class="note">
+    Each tool is a single self-contained page and works offline from a saved local copy
+    &mdash; useful on job sites with no signal. On mobile, use <b>Add to Home Screen</b>.
+  </div>
+
+  <div class="note">
+    These pages carry <code>noindex</code> so they stay out of search results, but the URL is
+    unlisted, not secret. <b>Do not enter customer names, addresses, or site data.</b>
+  </div>
+
+  <div class="footer">Advisory only &mdash; not a substitute for visual inspection or the planset.</div>
+
+</div>
 </body>
 </html>
