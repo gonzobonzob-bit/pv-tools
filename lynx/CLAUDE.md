@@ -1,7 +1,14 @@
-# pv-ct-review
+# lynx (in pv-tools)
 
 Single-file browser diagnostic tool for solar PV CT data. Deployed to GitHub Pages:
-https://gonzobonzob-bit.github.io/pv-ct-review/
+https://gonzobonzob-bit.github.io/pv-tools/lynx/
+
+**This directory is the live source for Lynx.** It moved here from the standalone
+`gonzobonzob-bit/pv-ct-review` repo, which is now archived and serves only a redirect.
+Do not develop Lynx there — the tool source lives here.
+
+Git history before the move stayed behind in `pv-ct-review`; this repo's history starts
+at the hub's initial commit.
 
 ## Workflow
 
@@ -59,5 +66,10 @@ Do NOT revert to the old light theme (white cards, `--blue`, Inter font, border-
 
 ## Deploy
 
-GitHub Pages, branch `main`, root `/`. Push to main triggers automatic redeploy (~30s).
+GitHub Pages from the `pv-tools` repo, branch `main`, root `/`. Lynx is served from the
+`lynx/` subpath. Push to main triggers automatic redeploy (~30s).
 Check with: `gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId') --exit-status`
+
+Note the repo also runs a CI job on push (`.github/workflows/test.yml`), which currently
+tests only `pw3-string-analyzer`. Lynx has CSV fixtures in `tests/site_review/` but no
+runner, so a Lynx change is not covered by CI.
