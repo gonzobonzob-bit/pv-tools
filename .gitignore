@@ -15,3 +15,7 @@ desktop.ini
 .idea/
 *.swp
 *~
+
+# Local-only tools - part of the hub on disk, deliberately never pushed.
+# The hosted hub page detects its absence and marks the card local-only.
+job-photo-packet/

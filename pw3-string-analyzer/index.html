@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#14161a">
+<meta name="theme-color" content="#0f1115">
 <!-- Keep this page out of search results. Honored by Google, Bing, DuckDuckGo,
      Yandex. This is NOT access control - anyone with the URL can still open it. -->
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
@@ -14,108 +14,164 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
---bg:#14161a;--card:#1b1e24;--card-alt:#20232a;--line:#2a2e36;
---ink:#eef0f3;--muted:#9aa0ab;
---orange:#f5821f;--orange-light:#ff9a3d;--orange-bg:#2e2010;
---green:#3fbd72;--green-bg:#15261c;--green-line:#234a32;
---red:#ef5b52;--red-bg:#2c1816;--red-line:#4a2723;
---amber:#e3a23a;--amber-bg:#2c2210;--amber-line:#4a3a1a;
---mono:'Courier New',Courier,monospace;
---sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif
+/* Surfaces - deep graphite (DESIGN.md v2 tokens) */
+--bg:#0f1115;--surface:#171a20;--surface-2:#1e222a;--line:#2b303a;--line-strong:#3a4150;
+/* Text */
+--ink:#f2f4f7;--muted:#98a1ad;--faint:#6b7280;
+/* Brand - solar amber */
+--sun:#ffb43a;--sun-deep:#f5821f;--sun-bg:#2a1f0e;
+/* Status pairs */
+--ok:#3ecf8e;--ok-bg:#0e2a1e;
+--warn:#ffd166;--warn-bg:#2a2410;
+--danger:#ff5d5d;--danger-bg:#2c1414;
+--info:#4fc3f7;--info-bg:#0e2230;
+/* Shape & type */
+--r-card:12px;--r-ctl:8px;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+--mono:ui-monospace,'Cascadia Mono','SF Mono',Consolas,monospace
 }
-body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5;padding:12px;padding-bottom:48px;-webkit-text-size-adjust:100%}
-.container{max-width:640px;margin:0 auto}
-.header{margin-bottom:16px;padding:12px 0;border-bottom:2px solid var(--line)}
-.header h1{font-size:22px;font-weight:600;letter-spacing:-.01em}
-.header p{font-size:12px;color:var(--muted);margin-top:2px}
-.card{background:var(--card);border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid var(--line)}
-.variant-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.variant-row label{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
-select{flex:1;min-width:180px;font-size:15px;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card-alt);color:var(--ink)}
-select:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(245,130,31,.25)}
-.variant-hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.45}
+html{-webkit-text-size-adjust:100%}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5}
+/* App bar */
+.appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;
+  background:rgba(15,17,21,.92);border-bottom:1px solid var(--line);
+  padding:6px 16px;padding-top:calc(6px + env(safe-area-inset-top));
+  padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
+@supports (backdrop-filter:blur(8px)){.appbar{background:rgba(15,17,21,.8);backdrop-filter:blur(8px)}}
+.appbar .back{display:inline-flex;align-items:center;min-height:44px;flex-shrink:0;
+  color:var(--muted);text-decoration:none;font-size:14px;font-weight:600}
+.appbar .back:hover{color:var(--sun)}
+.appbar .tool-name{font-size:16px;font-weight:600;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.appbar .ver{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--faint);flex-shrink:0}
+/* Content column */
+.container{max-width:640px;margin:0 auto;padding:16px;
+  padding-bottom:calc(48px + env(safe-area-inset-bottom));
+  padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right))}
+@media (min-width:700px){.container{padding-left:24px;padding-right:24px}}
+.lede{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.55}
+/* Cards */
+.card{background:var(--surface);border-radius:var(--r-card);padding:16px;margin-bottom:16px;border:1px solid var(--line)}
+.card-heading{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.card-head-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.card-head-row .card-heading{margin-bottom:0}
+.head-tag{font-size:11px;font-weight:600;color:var(--sun);background:var(--sun-bg);
+  border:1px solid rgba(255,180,58,.4);border-radius:999px;padding:2px 9px;white-space:nowrap}
+/* Controls */
+select{width:100%;min-height:44px;font-size:16px;padding:10px 12px;font-family:inherit;
+  border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--surface-2);color:var(--ink)}
+select:focus{outline:2px solid var(--sun);outline-offset:-1px;border-color:var(--sun)}
+.variant-hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5}
 .set-group{margin-bottom:18px}
-.set-label{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--ink);margin-bottom:2px;letter-spacing:.5px}
-.set-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
-.mppt-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.mppt-box{border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--card-alt)}
-.mppt-title{font-size:11px;font-weight:700;color:var(--ink);margin-bottom:8px;letter-spacing:.4px}
-.input-group{display:grid;grid-template-columns:auto 1fr;gap:6px;align-items:center;margin-bottom:6px}
+.set-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.set-label{font-size:13px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+.set-tag{font-size:11px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;border:1px solid}
+.set-tag.tag-jumper{color:var(--sun);background:var(--sun-bg);border-color:rgba(255,180,58,.4)}
+.set-tag.tag-fixed{color:var(--info);background:var(--info-bg);border-color:rgba(79,195,247,.4)}
+.set-sub{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.45}
+.mppt-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.mppt-box{border:1px solid var(--line);border-radius:var(--r-ctl);padding:10px;background:var(--surface-2)}
+.mppt-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.input-group{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;margin-bottom:8px}
 .input-group:last-child{margin-bottom:0}
-.input-group label{font-size:11px;color:var(--muted);font-weight:600;width:16px}
-input[type=number]{width:100%;font-size:16px;padding:8px;border:1px solid var(--line);border-radius:5px;text-align:right;background:var(--bg);color:var(--ink);-moz-appearance:textfield}
+.input-group label{font-size:12px;color:var(--muted);font-weight:600;width:16px;text-align:center}
+input[type=number]{width:100%;min-height:44px;font-size:16px;padding:8px 10px;text-align:right;
+  font-family:var(--mono);font-variant-numeric:tabular-nums;
+  border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--bg);color:var(--ink);-moz-appearance:textfield}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-input[type=number]:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(245,130,31,.25)}
+input[type=number]:focus{outline:2px solid var(--sun);outline-offset:-1px;border-color:var(--sun)}
 .set-divider{height:1px;background:var(--line);margin:18px 0}
-.button-group{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:6px}
-button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px;cursor:pointer;font-family:inherit}
-.analyze-btn{background:var(--orange);color:#14161a}
-.analyze-btn:active{background:var(--orange-light)}
-.reset-btn{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+/* Primary action - sticky at the bottom of the form card so Analyze is always reachable */
+.button-group{display:grid;grid-template-columns:2fr 1fr;gap:10px;position:sticky;bottom:0;z-index:10;
+  margin:16px -16px -16px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:var(--surface);border-top:1px solid var(--line);border-radius:0 0 var(--r-card) var(--r-card)}
+button{min-height:44px;font-size:16px;font-weight:600;padding:11px 13px;border:none;
+  border-radius:var(--r-ctl);cursor:pointer;font-family:inherit;transition:background .15s,filter .15s}
+button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
+.appbar .back:focus-visible{outline:2px solid var(--sun);outline-offset:-1px;border-radius:var(--r-ctl)}
+.analyze-btn{background:var(--sun-deep);color:#fff}
+.analyze-btn:active{filter:brightness(1.15)}
+.reset-btn{background:transparent;color:var(--ink);border:1px solid var(--line-strong)}
+.reset-btn:active{background:var(--surface-2)}
+/* Output */
 .output-section{display:none}
 .output-section.active{display:block}
-.status-bar{display:flex;align-items:center;gap:9px;padding:13px 15px;border-radius:8px;font-weight:600;font-size:16px;margin-bottom:14px}
+.status-bar{display:flex;align-items:center;gap:10px;min-height:48px;padding:12px 16px;
+  border-radius:var(--r-card);font-weight:700;font-size:17px;margin-bottom:16px}
 .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.status-bar.green{background:var(--green);color:#14161a}.status-bar.green .status-dot{background:#14161a}
-.status-bar.yellow{background:var(--amber);color:#14161a}.status-bar.yellow .status-dot{background:#14161a}
-.status-bar.red{background:var(--red);color:#14161a}.status-bar.red .status-dot{background:#14161a}
-.status-bar.grey{background:var(--card-alt);color:var(--muted);border:1px solid var(--line)}.status-bar.grey .status-dot{background:var(--muted)}
-.config-summary{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+/* Solid fills with dark ink: red/amber/green banners must stay legible in direct sun */
+.status-bar.green{background:var(--ok);color:#0f1115}.status-bar.green .status-dot{background:#0f1115}
+.status-bar.yellow{background:var(--warn);color:#0f1115}.status-bar.yellow .status-dot{background:#0f1115}
+.status-bar.red{background:var(--danger);color:#0f1115}.status-bar.red .status-dot{background:#0f1115}
+.status-bar.grey{background:var(--surface-2);color:var(--muted);border:1px solid var(--line)}.status-bar.grey .status-dot{background:var(--muted)}
+.config-summary{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px;margin-bottom:16px}
 .cfg-set{padding:10px 0}
+.cfg-set:first-child{padding-top:2px}
 .cfg-set+.cfg-set{border-top:1px solid var(--line)}
 .config-line{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
 .config-label{color:var(--muted);flex-shrink:0}
-.config-value{font-weight:600;text-align:right}
-.j-in{color:var(--green)}.j-out{color:var(--amber)}.j-unk{color:var(--muted)}.j-na{color:var(--muted)}
-.findings-section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
-.findings-title{font-size:12px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:10px}
-.finding{font-size:13px;padding:9px 11px;border-radius:6px;margin-bottom:7px;border-left:3px solid}
+.config-value{font-weight:600;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;min-width:0;overflow-wrap:anywhere}
+.j-in{color:var(--ok)}.j-out{color:var(--warn)}.j-unk{color:var(--muted)}.j-na{color:var(--faint)}
+.findings-section{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
+.findings-title{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:10px}
+.finding{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:var(--r-ctl);margin-bottom:8px;
+  border:1px solid;border-left-width:3px;overflow-wrap:break-word}
 .finding:last-child{margin-bottom:0}
-.finding.info{background:var(--card-alt);border-color:var(--muted);color:var(--ink)}
-.finding.warning{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
-.finding.error{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-.finding.ok{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.diagnostic-note{font-size:11px;color:var(--muted);margin-top:14px;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;line-height:1.6}
+.finding.info{background:var(--info-bg);border-color:rgba(79,195,247,.4);border-left-color:var(--info);color:var(--info)}
+.finding.warning{background:var(--warn-bg);border-color:rgba(255,209,102,.4);border-left-color:var(--warn);color:var(--warn)}
+.finding.error{background:var(--danger-bg);border-color:rgba(255,93,93,.4);border-left-color:var(--danger);color:var(--danger)}
+.finding.ok{background:var(--ok-bg);border-color:rgba(62,207,142,.4);border-left-color:var(--ok);color:var(--ok)}
+.diagnostic-note{font-size:12px;color:var(--muted);margin-top:16px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);line-height:1.6}
 .diagnostic-note b{color:var(--ink)}
-.footer{font-size:10px;color:var(--muted);text-align:center;margin-top:18px;line-height:1.6}
-.footer .credit{display:inline-block;margin-top:6px;color:var(--muted);opacity:.75;letter-spacing:.04em}
-.paste-label{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.5px;margin-bottom:5px}
-.paste-hint{font-size:11px;color:var(--muted);line-height:1.45;margin-bottom:10px}
-#pasteBox{width:100%;font-family:var(--mono);font-size:12.5px;line-height:1.45;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);resize:vertical;min-height:84px}
-#pasteBox:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(245,130,31,.25)}
+.footer{font-size:11px;color:var(--faint);text-align:center;margin-top:20px;line-height:1.6}
+.footer .credit{display:inline-block;margin-top:6px;letter-spacing:.04em}
+/* Paste-from-Tesla-One card */
+.paste-hint{font-size:12px;color:var(--muted);line-height:1.5;margin:8px 0 10px}
+#pasteBox{width:100%;font-family:var(--mono);font-size:16px;line-height:1.45;padding:10px 12px;
+  border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--surface-2);color:var(--ink);
+  resize:vertical;min-height:96px}
+#pasteBox::placeholder{color:var(--faint)}
+#pasteBox:focus{outline:2px solid var(--sun);outline-offset:-1px;border-color:var(--sun)}
 .paste-actions{display:grid;grid-template-columns:2fr 1fr;gap:10px;margin-top:10px}
-.fill-btn{background:var(--orange);color:#14161a}
-.fill-btn:active{background:var(--orange-light)}
-.paste-msg{font-size:12.5px;line-height:1.5;margin-top:11px;padding:9px 11px;border-radius:6px;border-left:3px solid}
-.paste-msg.ok{background:var(--green-bg);border-color:var(--green);color:var(--green)}
-.paste-msg.warn{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
-.paste-msg.err{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-.paste-chip{display:inline-block;margin-top:9px;margin-right:6px;font-size:11px;color:var(--muted);background:var(--card-alt);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.fill-btn{background:var(--sun-deep);color:#fff}
+.fill-btn:active{filter:brightness(1.15)}
+.paste-msg{font-size:13px;line-height:1.5;margin-top:11px;padding:9px 12px;border-radius:var(--r-ctl);
+  border:1px solid;border-left-width:3px;overflow-wrap:break-word}
+.paste-msg.ok{background:var(--ok-bg);border-color:rgba(62,207,142,.4);border-left-color:var(--ok);color:var(--ok)}
+.paste-msg.warn{background:var(--warn-bg);border-color:rgba(255,209,102,.4);border-left-color:var(--warn);color:var(--warn)}
+.paste-msg.err{background:var(--danger-bg);border-color:rgba(255,93,93,.4);border-left-color:var(--danger);color:var(--danger)}
+.paste-chip{display:inline-block;margin-top:9px;margin-right:6px;font-size:11px;color:var(--muted);
+  background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
 .paste-chip b{color:var(--ink);font-weight:600}
 @media (max-width:400px){.mppt-pair{grid-template-columns:1fr}.paste-actions{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<header class="appbar">
+  <a class="back" href="../">&larr; PV Tools</a>
+  <span class="tool-name">PW3 String Analyzer</span>
+  <span class="ver">v4.2</span>
+</header>
+
 <div class="container">
 
-  <div class="header">
-    <h1>PW3 String Analyzer</h1>
-    <p>Tesla Powerwall 3 &mdash; MPPT configuration diagnostic &middot; v4.1</p>
-  </div>
+  <p class="lede">Tesla Powerwall 3 &mdash; MPPT configuration diagnostic. Enter the six Solar DC Input readings from Tesla One and get verdicts on overcurrent, overvoltage, jumpers, dead strings and imbalance.</p>
 
   <div class="card">
-    <div class="variant-row">
-      <label for="variant">Unit rating</label>
-      <select id="variant">
-        <option value="13" selected>13 A Imp unit (most units)</option>
-        <option value="15">15 A Imp unit (P/N 1707000-11-L / -21-L and higher)</option>
-      </select>
-    </div>
+    <label class="card-heading" for="variant">Unit rating</label>
+    <select id="variant">
+      <option value="13" selected>13 A Imp unit (most units)</option>
+      <option value="15">15 A Imp unit (P/N 1707000-11-L / -21-L and higher)</option>
+    </select>
     <div class="variant-hint">Tesla ships two PW3 variants with different PV input current ratings. Check the label in the enclosure. Getting this wrong changes every current verdict below.</div>
   </div>
 
   <div class="card">
-    <div class="paste-label">Paste from Tesla One</div>
+    <div class="card-head-row">
+      <label class="card-heading" for="pasteBox">Paste from Tesla One</label>
+      <span class="head-tag">Fastest input</span>
+    </div>
     <div class="paste-hint">Copy the vitals screen and paste it here instead of typing twelve numbers. The six V/A pairs fill the fields below. Nothing is analyzed automatically &mdash; check the values, then press Analyze.</div>
     <textarea id="pasteBox" rows="4" spellcheck="false" autocomplete="off" placeholder="Solar DC Inputs&#10;MPPT 1&#10;380V / 9.5A&#10;..."></textarea>
     <div class="paste-actions">
@@ -126,11 +182,14 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
   </div>
 
   <div class="card">
+    <div class="card-heading">String readings</div>
     <form id="form" novalidate>
 
       <div class="set-group">
-        <div class="set-label">Set A &mdash; MPPT 1 &amp; 2</div>
-        <div class="set-sub">Jumper-capable pair (1&#8596;2)</div>
+        <div class="set-head">
+          <div class="set-label">Set A &middot; MPPT 1 &amp; 2</div>
+          <span class="set-tag tag-jumper">Jumper-capable 1&#8596;2</span>
+        </div>
         <div class="mppt-pair">
           <div class="mppt-box"><div class="mppt-title">MPPT 1</div>
             <div class="input-group"><label for="m1v">V</label><input type="number" id="m1v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
@@ -146,8 +205,11 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
       <div class="set-divider"></div>
 
       <div class="set-group">
-        <div class="set-label">Set B &mdash; MPPT 3 &amp; 4</div>
-        <div class="set-sub">Independent inputs &mdash; factory-closed, cannot be jumpered</div>
+        <div class="set-head">
+          <div class="set-label">Set B &middot; MPPT 3 &amp; 4</div>
+          <span class="set-tag tag-fixed">Independent &mdash; no jumper</span>
+        </div>
+        <div class="set-sub">Factory-closed; cannot be jumpered. Both inputs fully usable on their own.</div>
         <div class="mppt-pair">
           <div class="mppt-box"><div class="mppt-title">MPPT 3</div>
             <div class="input-group"><label for="m3v">V</label><input type="number" id="m3v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
@@ -163,8 +225,10 @@ button{font-size:15px;font-weight:600;padding:13px;border:none;border-radius:7px
       <div class="set-divider"></div>
 
       <div class="set-group">
-        <div class="set-label">Set C &mdash; MPPT 5 &amp; 6</div>
-        <div class="set-sub">Jumper-capable pair (5&#8596;6)</div>
+        <div class="set-head">
+          <div class="set-label">Set C &middot; MPPT 5 &amp; 6</div>
+          <span class="set-tag tag-jumper">Jumper-capable 5&#8596;6</span>
+        </div>
         <div class="mppt-pair">
           <div class="mppt-box"><div class="mppt-title">MPPT 5</div>
             <div class="input-group"><label for="m5v">V</label><input type="number" id="m5v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
