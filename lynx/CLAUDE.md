@@ -23,31 +23,20 @@ The user iterates on features in the Claude.ai web app, downloads the result, an
 
 ## CSS design system — preserve exactly
 
-As of v1.14, Lynx is on the PV Tools shared design system **v2.1 "Solar Flare"**
-(`../DESIGN.md` is the binding spec — tokens are copied into the `<style>` block).
-Warm near-black grounds, molten amber→orange→coral gradient `--g`, luminous glowing
-status tokens. Font: system sans stack (`--sans`), `ui-monospace` stack (`--mono`).
-No Google Fonts dependency.
+Dark theme with orange accent. Font: system sans-serif stack (`--sans`). No Google Fonts dependency.
 
-Lynx-specific notes on top of DESIGN.md:
-- Legacy token names (`--card`, `--card-alt`, `--orange`, `--red`/`--green`/`--amber`
-  and their `-bg`/`-line` pairs) are kept in `:root` as **aliases** onto the v2.1
-  values because the JS references them (`var(--red)`, `var(--amber)`, `--amber-bg`).
-  Never rename or delete them.
-- Status banners: solid status-color fill (`--danger`/`--ok`/`--warn`) with dark
-  `--on-sun` ink — a deliberate deviation from DESIGN.md's gradient verdict banner so
-  GOOD / TROUBLESHOOT / CHECK YOUR EXPORT stay color-distinguishable.
-- One gradient-filled hero per region: `.upload-label` (main upload) and
-  `.primary-btn` (micro Compare). Inside `.micro-disclosure` the `.upload-label`s are
-  deliberately overridden to quiet secondary style.
-- Sticky `.appbar-wrap` (← PV Tools / Lynx / version pill) with the 3px `--g`
-  glowline under it; the visible version string lives in `.appbar-ver`.
-- Chart series color literals in JS (`renderChart`'s `colors` object) and SVG
-  axis/grid literals are mapped to v2.1 tokens: pv #6fc9ff, grid #ffb43a,
-  load #ff4d6d, batt #5df0b2; gridlines #4d3d24; axis text #7d735f.
+CSS variables (defined in `:root`):
+- `--bg` #14161a, `--card` #1b1e24, `--card-alt` #20232a, `--line` #2a2e36
+- `--ink` #eef0f3, `--muted` #9aa0ab
+- `--orange` #f5821f, `--orange-light` #ff9a3d, `--orange-bg` #2e2010
+- `--green` #3fbd72, `--green-bg` #15261c, `--green-line` #234a32
+- `--red` #ef5b52, `--red-bg` #2c1816, `--red-line` #4a2723
+- `--amber` #e3a23a, `--amber-bg` #2c2210, `--amber-line` #4a3a1a
+- `--mono` Courier New stack, `--sans` system stack
 
-Do NOT revert to the old light theme (white cards, `--blue`, Inter font) or the
-pre-v1.14 cool-gray dark/orange palette (#14161a / #f5821f).
+Status banners: solid color fill (`background: var(--red/green/amber)`), white text.
+Buttons: orange fill for primary actions (`--orange`), card-colored for reset/secondary.
+Do NOT revert to the old light theme (white cards, `--blue`, Inter font, border-left banners).
 
 ## Current features
 
