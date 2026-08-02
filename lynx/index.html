@@ -1320,6 +1320,137 @@ function classifyDropShape(points, key, runStartTime, substantialW = 500) {
  * "16 hours is too long for a night" guess breaks at high latitudes in
  * winter (genuinely 18+ hour nights) and doesn't adapt site-to-site; this
  * calibrates the threshold from what this specific system actually does. */
+/** ---------------------------------------------------------------------------
+ * PV-into-Load bleed check (envelope-shape test).
+ *
+ * WHY THIS EXISTS — the gap it closes:
+ * differencedCorrelation() asks whether PV and Load make the same step-to-step
+ * wiggles. That catches hard cross-talk during choppy weather, but it is blind
+ * to the more common presentation: a consumption channel carrying a steady
+ * fraction of PV all day. Differencing destroys exactly that signal — a smooth
+ * scaled copy of the PV envelope has small smooth steps, so the differenced
+ * correlation reads normal while the daily shape is visibly wrong.
+ *
+ * Measured on this tool's own bundled examples, whole-file:
+ *   example_good_1 (healthy)      differenced r = 0.34   bleed slope k = 0.21
+ *   example_bad_1  (confirmed CT) differenced r = 0.34   bleed slope k = 1.32
+ *   example_good_2 (healthy)      differenced r = 0.01   bleed slope k = 0.00
+ *   example_bad_2  (confirmed CT) differenced r = 0.48   bleed slope k = 0.53
+ * The differenced figure does not separate healthy from confirmed-bad at all
+ * (0.34 vs 0.34). That is the rationale for a different statistic.
+ *
+ * WHAT IT MEASURES:
+ * Least-squares fit of  Load = intercept + k * PV  over daylight rows, computed
+ * PER DAY and then aggregated. k is the watts of apparent consumption added per
+ * watt of production — the "bleed fraction." Independent household load has no
+ * mechanical reason to scale with irradiance.
+ *
+ * WHY PER-DAY: day-to-day persistence is free confidence. A wiring fault is
+ * present every single day; a hot spell that runs the A/C is not. Across the 16
+ * days in the bundled examples the split was total — 8/8 confirmed-cross-talk
+ * days above the cut, 0/8 healthy days above it:
+ *   healthy days:    k max 0.210  (8 days across 2 files)
+ *   cross-talk days: k min 0.304  (8 days across 2 files)
+ * The 0.25 cut sits in that gap.
+ *
+ * ON THE INTERCEPT: an earlier version of this check gated on the daylight
+ * intercept collapsing against the night baseline, on the theory that real
+ * solar-correlated load ADDS to the standalone baseline while cross-talk
+ * REPLACES it. The theory is sound but the measurement is not discriminative
+ * here: healthy days ran down to 0.855 of night baseline and cross-talk days up
+ * to 0.864 — overlapping. It is retained ONLY to shade the wording, never to
+ * gate the finding. Do not restore it as a gate without data that supports it.
+ *
+ * KNOWN CONFOUND: genuinely solar-correlated loads — A/C on hot sunny days,
+ * pool pumps and EV chargers on solar-priority schedules, heat pumps. These can
+ * produce real k in roughly the 0.15-0.35 band. Persistence is the separator
+ * (weather-driven load is intermittent, wiring is not), and the finding text
+ * asks the one question that settles it rather than guessing.
+ *
+ * THRESHOLDS ARE PROVISIONAL: 16 days across 4 real files. Enough to place a
+ * cut inside a clean gap; not enough to trust it at the edges. Revisit as
+ * confirmed files accumulate.
+ * -------------------------------------------------------------------------- */
+function checkPvBleed(points) {
+  const valid = points.filter(p => p.pv !== null && p.load !== null && parseTimeSafe(p.time));
+  if (valid.length < 12) return null;
+
+  // ---- group into local days ----
+  const byDay = new Map();
+  for (const p of valid) {
+    const t = parseTimeSafe(p.time);
+    const key = `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(p);
+  }
+
+  const days = [];
+  for (const [day, rows] of byDay) {
+    const pvMax = Math.max(...rows.map(p => p.pv));
+    if (pvMax < 200) continue;                       // no meaningful production that day
+    const daylight = rows.filter(p => p.pv > 0.05 * pvMax);
+    if (daylight.length < 10) continue;              // too little daylight coverage
+
+    const n = daylight.length;
+    const mx = daylight.reduce((s,p)=>s+p.pv,0)/n;
+    const my = daylight.reduce((s,p)=>s+p.load,0)/n;
+    let sxy = 0, sxx = 0;
+    for (const p of daylight) { sxy += (p.pv-mx)*(p.load-my); sxx += (p.pv-mx)**2; }
+    if (sxx === 0) continue;
+    const k = sxy / sxx;
+    const intercept = my - k * mx;
+
+    const night = rows.filter(p => p.pv <= Math.max(20, 0.02 * pvMax)).map(p=>p.load).sort((a,b)=>a-b);
+    const nightBase = night.length >= 3 ? night[Math.floor(night.length/2)] : null;
+
+    days.push({ day, k, intercept, nightBase, pvMax, nDaylight: n,
+                baselineRatio: (nightBase !== null && nightBase > 50) ? intercept/nightBase : null });
+  }
+  if (days.length === 0) return null;
+
+  const FLAG = 0.25, STRONG = 0.45;
+  const ks = days.map(d=>d.k).sort((a,b)=>a-b);
+  const medianK = ks[Math.floor(ks.length/2)];
+  const maxK = ks[ks.length-1];
+  const flaggedDays = days.filter(d => d.k >= FLAG);
+  const persistence = flaggedDays.length / days.length;
+
+  // Whole-file slope, reported alongside the per-day view.
+  const allDay = valid.filter(p => p.pv > 0.05 * Math.max(...valid.map(q=>q.pv)));
+  let overallK = null;
+  if (allDay.length >= 10) {
+    const n=allDay.length;
+    const mx=allDay.reduce((s,p)=>s+p.pv,0)/n, my=allDay.reduce((s,p)=>s+p.load,0)/n;
+    let sxy=0,sxx=0;
+    for (const p of allDay){ sxy+=(p.pv-mx)*(p.load-my); sxx+=(p.pv-mx)**2; }
+    if (sxx>0) overallK = sxy/sxx;
+  }
+
+  // Severity is driven by slope magnitude; persistence sets confidence.
+  // A single flagged day out of many is a lead, not a verdict — weather-driven
+  // load looks exactly like that.
+  let severity = 'clean';
+  if (flaggedDays.length > 0) {
+    const strongEnough = medianK >= STRONG || (days.length === 1 && maxK >= STRONG);
+    if (persistence >= 0.6) severity = strongEnough ? 'strong' : 'moderate';
+    else severity = 'intermittent';
+  }
+
+  // Baseline shading only — never a gate. See header note.
+  const ratios = days.map(d=>d.baselineRatio).filter(v=>v!==null);
+  const medianRatio = ratios.length ? ratios.sort((a,b)=>a-b)[Math.floor(ratios.length/2)] : null;
+
+  // The day that actually produced maxK. Must be derived here, not inferred
+  // downstream: flaggedDayList is chronological, so its first entry is the
+  // EARLIEST flagged day, which is generally NOT the strongest one. Reporting
+  // maxK next to flaggedDayList[0] points a tech at the wrong date.
+  const peakDay = days.reduce((best,d) => (best === null || d.k > best.k) ? d : best, null).day;
+
+  return { severity, medianK, maxK, overallK, days, nDays: days.length,
+           nFlaggedDays: flaggedDays.length, persistence, medianRatio, peakDay,
+           flaggedDayList: flaggedDays.map(d=>d.day) };
+}
+
 /** Late-night sustained-load observation — info-only, never an issue, never
  * affects the verdict. Verified against published data: EIA RECS puts the
  * average US household at ~10,500 kWh/yr (~1.2kW mean draw) with always-on
@@ -2022,6 +2153,60 @@ function runDiagnostic(parsed) {
           sources: [CITATIONS.granger] });
       }
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // INTEGRATION — insert AFTER the existing cross-talk (differenced correlation)
+  // block, so the two read as a pair: step-correlation covers choppy weather,
+  // this covers the smooth all-day case it cannot see.
+  //
+  // Standing rule applies: this check must never be silently absent. Every path
+  // produces a verdict or an explicit inconclusive item.
+  // ---------------------------------------------------------------------------
+
+  const bleed = checkPvBleed(points);
+
+  if (mode === 'tesla_derived') {
+    // Intentionally not run: Load is derived (Solar + Site + Battery), so a
+    // PV-to-Load slope would measure the arithmetic, not the wiring.
+  } else if (!bleed) {
+    items.push({ type:'info', inconclusive:true,
+      headline:'Production-into-usage bleed check could not run',
+      resolution:'not enough daylight rows with both PV and Load',
+      seeing:'This check needs at least one day with 10+ readings above 5% of that day\'s peak production, with a Load value on the same row. This export did not have them. No verdict was produced — this is not a clean result.',
+      recommendation:'Re-export covering at least one full daylight period and re-run.',
+      plainSummary:'Not enough daytime data to test whether production is bleeding into the usage reading — skipped, not passed.' });
+  } else if (bleed.severity === 'strong' || bleed.severity === 'moderate') {
+    const pct = Math.round(bleed.medianK * 100);
+    const dayWord = bleed.nDays === 1 ? 'the one day in this export' : `${bleed.nFlaggedDays} of ${bleed.nDays} days`;
+    const baselineNote = bleed.medianRatio !== null && bleed.medianRatio < 0.7
+      ? ` The PV-independent part of consumption also runs low in daylight (${Math.round(bleed.medianRatio*100)}% of the night baseline), which fits a channel reporting production in place of load rather than alongside it.`
+      : '';
+    items.push({ type:'issue',
+      headline:`Usage reading rises ${pct}W for every 100W produced${bleed.severity==='moderate' ? ' (moderate)' : ''}`,
+      resolution:'investigate consumption CT placement — likely reading the PV conductor',
+      measured:`Bleed slope k = ${bleed.medianK.toFixed(2)} W per W (median across ${bleed.nDays} day(s); range up to ${bleed.maxK.toFixed(2)})` + (bleed.overallK !== null ? `; whole-file slope ${bleed.overallK.toFixed(2)}.` : '.'),
+      seeing:`Consumption tracks production as a scaled copy of its whole daily shape, not just in fast wiggles — and it does so on ${dayWord}. Healthy systems in this tool's reference set top out at k = 0.21; confirmed cross-talk starts at 0.30.${baselineNote} Note that the step-to-step correlation check above can read entirely normal in this situation: a smooth scaled copy has smooth steps, which is exactly what differencing removes.`,
+      recommendation:`<strong>Remote check:</strong> in ${portalName}, confirm the consumption CT is configured as whole-home (load side of the main) and not on a branch carrying PV backfeed. Then compare reported daily consumption against the customer's utility bill for the same period — a bleeding CT reports usage inflated by roughly the production total, and the bill settles it without anyone driving out. <strong>If it escalates:</strong> if configuration is correct and the bill confirms the discrepancy, the consumption CT is physically on a conductor carrying PV current, or on the wrong side of the interconnection point. That needs a truck roll to re-clamp — send the billed-vs-reported numbers with the tech so they arrive knowing the size of the error.`,
+      plainSummary:`The usage reading appears to be counting solar production as household consumption. The system is very likely producing and consuming normally — what's wrong is where one monitoring sensor is clamped, so the customer's usage numbers are inflated on sunny days.`,
+      sources: [CITATIONS.ctCross, CITATIONS.enphaseCt] });
+  } else if (bleed.severity === 'intermittent') {
+    const pct = Math.round(bleed.maxK * 100);
+    items.push({ type:'issue',
+      headline:`[WORTH CHECKING] Usage tracks production on ${bleed.nFlaggedDays} of ${bleed.nDays} days, not all of them`,
+      resolution:'distinguish weather-driven load from intermittent CT bleed',
+      measured:`Bleed slope reached k = ${bleed.maxK.toFixed(2)} on its strongest day (${escHtml(bleed.peakDay)}), median across all days ${bleed.medianK.toFixed(2)}.`,
+      seeing:`On some days consumption scales with production the way a miswired consumption CT would, but on the other ${bleed.nDays - bleed.nFlaggedDays} day(s) it does not. Wiring does not come and go — a genuine CT placement fault shows on every sunny day. An on-and-off pattern fits weather-driven load instead: air conditioning on the hot days, a pool pump or EV charger on a solar-priority schedule, a heat pump. This data alone cannot separate the two.`,
+      recommendation:`<strong>Remote check:</strong> ask what large loads run on a solar-linked or daytime schedule — a pool pump, EV charger, or smart thermostat set to run on solar explains this completely and needs no action. Cross-check the flagged dates against local weather: if they were the hot days, that is the answer. <strong>If it escalates:</strong> if there is no solar-scheduled load and the flagged days do not line up with weather, re-pull a longer export — if the pattern turns out to be present on every sunny day, it moves into CT placement territory and warrants a visit.`,
+      plainSummary:`Usage rises with production on some days but not others. That on-and-off pattern usually means something big runs during the day on purpose, not a wiring problem. One question to the customer about daytime appliances will normally settle it.`,
+      sources: [CITATIONS.ctCross] });
+  } else {
+    items.push({ type:'confirmed',
+      headline:'No production-into-usage bleed detected',
+      resolution:'no action needed',
+      seeing:`Consumption does not scale with production: bleed slope k = ${bleed.medianK.toFixed(2)} (median across ${bleed.nDays} day(s), peak ${bleed.maxK.toFixed(2)}), against a flag threshold of 0.25. No day in this export crossed it.`,
+      recommendation:'None.',
+      plainSummary:'The usage reading moves independently of solar production, which is what a correctly placed consumption sensor looks like.' });
   }
 
   // ---------- Flatline / dropout scan results (computed earlier) ----------
