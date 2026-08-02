@@ -58,6 +58,7 @@
   .tool-name{font-size:16px;font-weight:600;letter-spacing:-.005em}
   .tool-name .arrow{color:var(--sun);font-weight:400}
   .tool-desc{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.55}
+  .name-note{font-size:11px;color:var(--faint);margin-top:4px;font-style:italic}
   .badge{
     font-family:var(--mono);font-size:10px;letter-spacing:.05em;
     padding:2px 7px;border-radius:999px;white-space:nowrap;
@@ -100,6 +101,7 @@
         <div class="tool-desc">Tesla Powerwall 3 MPPT string diagnostic. Reads the six DC
         voltage/current pairs and flags overcurrent, overvoltage, missing or faulty jumpers,
         dead strings, and imbalance.</div>
+        <div class="name-note">Name: plain and literal &mdash; it analyzes PW3 strings.</div>
       </a>
     </li>
     <li>
@@ -107,12 +109,16 @@
         <div class="tool-head"><span class="tool-name">Lynx <span class="arrow">&rarr;</span></span></div>
         <div class="tool-desc">PV CT data reviewer. Loads exported graph data for site review,
         with microinverter troubleshooting.</div>
+        <div class="name-note">Name: a lynx catches the faint movement in a CT trace that a
+        slower eye would miss.</div>
       </a>
     </li>
     <li>
       <a class="tool" href="magpie/">
         <div class="tool-head"><span class="tool-name">Magpie <span class="arrow">&rarr;</span></span></div>
         <div class="tool-desc">Note builder. Assembles standardized job notes from reusable parts.</div>
+        <div class="name-note">Name: a magpie gathers scattered pieces into one nest, same as
+        this gathers note fragments into one job note.</div>
       </a>
     </li>
     <li>
@@ -123,6 +129,8 @@
         </div>
         <div class="tool-desc">Builds a formatted photo packet from job-site photos or zips
         &mdash; customer, subject, sections, and layout. Photos never leave the machine.</div>
+        <div class="name-note">Name: plain and literal, same reason as PW3 &mdash; it builds
+        the photo packet.</div>
         <span class="hosted-note">Not on the hosted site &mdash; this tool lives only in the
         local <b>pv-tools</b> folder. Open it from there.</span>
       </a>

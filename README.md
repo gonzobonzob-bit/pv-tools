@@ -6,11 +6,12 @@ single GitHub Pages site and eventually share code.
 Each tool is a self-contained static page — no build step, no dependencies, no network
 calls. Open any `index.html` directly, or use the hosted page.
 
-| Tool | Path | What it does |
-|---|---|---|
-| **PW3 String Analyzer** | [`pw3-string-analyzer/`](pw3-string-analyzer/) | Tesla Powerwall 3 MPPT string diagnostic — flags overcurrent, overvoltage, missing or faulty jumpers, dead strings, imbalance |
-| **Lynx** | [`lynx/`](lynx/) | PV CT data reviewer |
-| **Magpie** | [`magpie/`](magpie/) | Note builder |
+| Tool | Path | What it does | Name |
+|---|---|---|---|
+| **PW3 String Analyzer** | [`pw3-string-analyzer/`](pw3-string-analyzer/) | Tesla Powerwall 3 MPPT string diagnostic — flags overcurrent, overvoltage, missing or faulty jumpers, dead strings, imbalance | Literal — analyzes PW3 strings |
+| **Lynx** | [`lynx/`](lynx/) | PV CT data reviewer | A lynx catches the faint movement a slower eye misses |
+| **Magpie** | [`magpie/`](magpie/) | Note builder | A magpie gathers scattered pieces into one nest |
+| **Job Photo Packet** | `job-photo-packet/` (local only, gitignored) | Builds a formatted photo packet from job-site photos | Literal — builds the photo packet |
 
 Per-tool documentation lives in each directory. `pw3-string-analyzer/` has a full
 [README](pw3-string-analyzer/README.md) and [SPECS](pw3-string-analyzer/SPECS.md) with

@@ -1,5 +1,7 @@
 # lynx (in pv-tools)
 
+Name: a lynx catches the faint movement a slower eye misses — same instinct, aimed at CT traces.
+
 Single-file browser diagnostic tool for solar PV CT data. Deployed to GitHub Pages:
 https://gonzobonzob-bit.github.io/pv-tools/lynx/
 

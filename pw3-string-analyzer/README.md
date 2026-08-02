@@ -1,5 +1,7 @@
 # PW3 String Analyzer
 
+Name: literal — it analyzes PW3 strings.
+
 A single-file field diagnostic for Tesla Powerwall 3 MPPT configuration.
 
 A tech reads the six DC voltage/current pairs off **Tesla One → Solar DC Inputs** — pasting
