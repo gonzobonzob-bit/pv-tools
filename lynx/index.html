@@ -2203,7 +2203,9 @@ function runDiagnostic(parsed) {
     for (const fd of bleed.flaggedDays) {
       if (fd.startMs && fd.endMs) {
         highlights.push({ startMs: fd.startMs, endMs: fd.endMs, color: 'red',
-          label: `usage tracks production (k=${fd.k.toFixed(2)})`, itemUid: items.length - 1 });
+          label: `usage tracks production (k=${fd.k.toFixed(2)})`,
+          chartLabel: fd.day === bleed.peakDay ? `usage tracks production (k=${fd.k.toFixed(2)})` : '',
+          itemUid: items.length - 1 });
       }
     }
   } else if (bleed.severity === 'intermittent') {
@@ -2223,7 +2225,9 @@ function runDiagnostic(parsed) {
     for (const fd of bleed.flaggedDays) {
       if (fd.startMs && fd.endMs) {
         highlights.push({ startMs: fd.startMs, endMs: fd.endMs, color: 'amber',
-          label: `usage tracks production on this day (k=${fd.k.toFixed(2)})`, itemUid: items.length - 1 });
+          label: `usage tracks production on this day (k=${fd.k.toFixed(2)})`,
+          chartLabel: fd.day === bleed.peakDay ? `usage tracks production on this day (k=${fd.k.toFixed(2)})` : '',
+          itemUid: items.length - 1 });
       }
     }
   } else {
@@ -5672,10 +5676,14 @@ function renderChart(points, mode, highlights, zoom) {
     if (first === -1 || last <= first) continue;
     const bx = x(first), bw = Math.max(2, x(last) - x(first));
     const col = hl.color === 'red' ? 'var(--red)' : 'var(--amber)';
+    // chartLabel lets a caller suppress the on-chart text for a band while keeping
+    // its tooltip and popup label — used when many same-type bands sit close
+    // together (e.g. one per flagged day) and full labels on every band collide.
+    const chartText = hl.chartLabel !== undefined ? hl.chartLabel : hl.label;
     bands += `<rect data-hl="${hlIdx}" x="${bx.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${plotH}" fill="${col}" opacity="0.10"><title>${hl.label} — click to zoom</title></rect>`
       + `<line x1="${bx.toFixed(1)}" y1="${padT}" x2="${bx.toFixed(1)}" y2="${padT + plotH}" stroke="${col}" stroke-width="1" opacity="0.5"/>`
       + `<line x1="${(bx + bw).toFixed(1)}" y1="${padT}" x2="${(bx + bw).toFixed(1)}" y2="${padT + plotH}" stroke="${col}" stroke-width="1" opacity="0.5"/>`
-      + `<text x="${(bx + 3).toFixed(1)}" y="${padT + 10}" font-size="8.5" fill="${col}" font-family="Courier New, monospace">${hl.label}</text>`;
+      + (chartText ? `<text x="${(bx + 3).toFixed(1)}" y="${padT + 10}" font-size="8.5" fill="${col}" font-family="Courier New, monospace">${chartText}</text>` : '');
   }
 
   // Y-axis max reference so the scale is readable, not just the zero line.
