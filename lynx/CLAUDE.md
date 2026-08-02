@@ -12,14 +12,13 @@ at the hub's initial commit.
 
 ## Workflow
 
-The user iterates on features in the Claude.ai web app, downloads the result, and brings it here.
+The user works across multiple Claude surfaces (Code, Desktop, web) interchangeably —
+there's no separate claude.ai Project copy of `index.html` to keep in sync.
 
-**Standard flow:**
-1. User brings updated `index.html` from Downloads
-2. Diff against current project file — flag anything present in live but absent in the new file
-3. If clear, replace and push with the user's exact commit message
-4. Confirm Pages deploy and give URL
-5. Remind user to re-upload the committed file to their Claude.ai Project
+**When brought an updated `index.html` (e.g. from Downloads):**
+1. Diff against current project file — flag anything present in live but absent in the new file
+2. If clear, replace and push with the user's exact commit message
+3. Confirm Pages deploy and give URL
 
 ## CSS design system — preserve exactly
 
