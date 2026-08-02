@@ -1403,7 +1403,13 @@ function checkPvBleed(points) {
     const night = rows.filter(p => p.pv <= Math.max(20, 0.02 * pvMax)).map(p=>p.load).sort((a,b)=>a-b);
     const nightBase = night.length >= 3 ? night[Math.floor(night.length/2)] : null;
 
+    // Daylight span for this day, so a flagged day can be shaded on the chart.
+    // The bleed signature is the whole daylight envelope, not a sub-window —
+    // highlighting the full daylight span is what the finding actually claims.
+    const dayTimes = daylight.map(p => parseTimeSafe(p.time).getTime()).sort((a,b)=>a-b);
+
     days.push({ day, k, intercept, nightBase, pvMax, nDaylight: n,
+                startMs: dayTimes[0], endMs: dayTimes[dayTimes.length-1],
                 baselineRatio: (nightBase !== null && nightBase > 50) ? intercept/nightBase : null });
   }
   if (days.length === 0) return null;
@@ -1448,7 +1454,7 @@ function checkPvBleed(points) {
 
   return { severity, medianK, maxK, overallK, days, nDays: days.length,
            nFlaggedDays: flaggedDays.length, persistence, medianRatio, peakDay,
-           flaggedDayList: flaggedDays.map(d=>d.day) };
+           flaggedDays, flaggedDayList: flaggedDays.map(d=>d.day) };
 }
 
 /** Late-night sustained-load observation — info-only, never an issue, never
@@ -2190,6 +2196,16 @@ function runDiagnostic(parsed) {
       recommendation:`<strong>Remote check:</strong> in ${portalName}, confirm the consumption CT is configured as whole-home (load side of the main) and not on a branch carrying PV backfeed. Then compare reported daily consumption against the customer's utility bill for the same period — a bleeding CT reports usage inflated by roughly the production total, and the bill settles it without anyone driving out. <strong>If it escalates:</strong> if configuration is correct and the bill confirms the discrepancy, the consumption CT is physically on a conductor carrying PV current, or on the wrong side of the interconnection point. That needs a truck roll to re-clamp — send the billed-vs-reported numbers with the tech so they arrive knowing the size of the error.`,
       plainSummary:`The usage reading appears to be counting solar production as household consumption. The system is very likely producing and consuming normally — what's wrong is where one monitoring sensor is clamped, so the customer's usage numbers are inflated on sunny days.`,
       sources: [CITATIONS.ctCross, CITATIONS.enphaseCt] });
+    // Shade every flagged day's daylight span. Unlike the cross-talk window scan
+    // — which marks one narrow sub-window — the bleed signature IS the whole
+    // daylight envelope, and it is present on each flagged day. One band per day
+    // is what the finding actually claims, so the chart must show all of them.
+    for (const fd of bleed.flaggedDays) {
+      if (fd.startMs && fd.endMs) {
+        highlights.push({ startMs: fd.startMs, endMs: fd.endMs, color: 'red',
+          label: `usage tracks production (k=${fd.k.toFixed(2)})`, itemUid: items.length - 1 });
+      }
+    }
   } else if (bleed.severity === 'intermittent') {
     const pct = Math.round(bleed.maxK * 100);
     items.push({ type:'issue',
@@ -2200,6 +2216,16 @@ function runDiagnostic(parsed) {
       recommendation:`<strong>Remote check:</strong> ask what large loads run on a solar-linked or daytime schedule — a pool pump, EV charger, or smart thermostat set to run on solar explains this completely and needs no action. Cross-check the flagged dates against local weather: if they were the hot days, that is the answer. <strong>If it escalates:</strong> if there is no solar-scheduled load and the flagged days do not line up with weather, re-pull a longer export — if the pattern turns out to be present on every sunny day, it moves into CT placement territory and warrants a visit.`,
       plainSummary:`Usage rises with production on some days but not others. That on-and-off pattern usually means something big runs during the day on purpose, not a wiring problem. One question to the customer about daytime appliances will normally settle it.`,
       sources: [CITATIONS.ctCross] });
+    // Shade every flagged day's daylight span. Unlike the cross-talk window scan
+    // — which marks one narrow sub-window — the bleed signature IS the whole
+    // daylight envelope, and it is present on each flagged day. One band per day
+    // is what the finding actually claims, so the chart must show all of them.
+    for (const fd of bleed.flaggedDays) {
+      if (fd.startMs && fd.endMs) {
+        highlights.push({ startMs: fd.startMs, endMs: fd.endMs, color: 'amber',
+          label: `usage tracks production on this day (k=${fd.k.toFixed(2)})`, itemUid: items.length - 1 });
+      }
+    }
   } else {
     items.push({ type:'confirmed',
       headline:'No production-into-usage bleed detected',
@@ -5491,9 +5517,16 @@ function showOnChart(idx) {
 function showChartPopup(hl, anchorX, anchorY) {
   const pop = document.getElementById('chart-popup');
   const item = (__currentChart.items || []).find(it => it.uid === hl.itemUid);
-  const lookFor = hl.color === 'red'
-    ? "Watch how the Load line mirrors PV's swings inside this band — an independent household load has no ordinary reason to do that."
-    : 'This channel holds abnormally flat through this band — the dropout region.';
+  // The red band means different things for different checks: the cross-talk
+  // window scan marks fast co-movement, the bleed check marks a whole daylight
+  // envelope that scales with production. Describing the wrong one sends the
+  // reader looking for a pattern that isn't what was measured.
+  const isBleedBand = /usage tracks production/i.test(hl.label || '');
+  const lookFor = isBleedBand
+    ? "Compare the two lines across this whole day, not point by point — the Load line holds the same shape as PV, scaled down. An independent household load has no reason to follow the sun's envelope like that."
+    : hl.color === 'red'
+      ? "Watch how the Load line mirrors PV's swings inside this band — an independent household load has no ordinary reason to do that."
+      : 'This channel holds abnormally flat through this band — the dropout region.';
   pop.innerHTML = `
     <div class="pop-tag ${hl.color === 'red' ? 'issue' : 'info'}">${hl.label}</div>
     ${item ? `<div class="pop-headline">${item.headline}</div>` : ''}
