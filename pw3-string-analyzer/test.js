@@ -331,6 +331,618 @@ for (const v1 of vs) for (const a1 of as) for (const v2 of vs) for (const a2 of 
 }
 console.log(`\nFuzz: ${checked} combinations, ${crashes} crashes`);
 
+/* ---------- String counter (module data card) ----------
+   Feature is OFF unless a module Voc is entered. Every assertion below either
+   proves it stays off, or proves the count/limit maths against hand-worked
+   numbers -- NOT against the implementation. */
+
+const M45 = { voc: 45, vmp: 45 * 0.83, betaVoc: -0.27, betaVmp: -0.37,
+              tLo: 25, tHi: 55, tRecord: -10, plan: 0 };
+function withMod(o) { return Object.assign({}, M45, o); }
+
+const STR_CASES = [
+  { n: 'Module card empty -> feature entirely inert, no rows, no findings',
+    mod: null, r: [[380, 9.5], [380, 9.5], null, null, null, null],
+    rows: 0, findings: 0, sev: 0 },
+
+  { n: 'Loaded reading uses Vmp, not Voc (the undercount bug this exists to avoid)',
+    mod: M45, r: [[448, 9.5], null, null, null, null, null],
+    rows: 1, estLo: 12, estHi: 13,
+    note: '448 V / 45 would naively say 10; true string is 12' },
+
+  { n: 'Open-circuit reading uses Voc, and does not over-assert the count',
+    mod: M45, r: [[540, 0], null, null, null, null, null],
+    rows: 1, estLo: 12, estHi: 13,
+    note: '12 mods at 25C and 13 mods at 55C both read ~540 V open-circuit - '
+        + 'reporting a bare "12" would be false precision' },
+
+  { n: 'Hot-roof reading of the same 12-module string still estimates 12',
+    mod: withMod({ tLo: 25, tHi: 65 }), r: [[382, 9.5], null, null, null, null, null],
+    rows: 1, estLoMax: 12, estHiMin: 12,
+    note: 'naive 382/45 = 8; range must still contain 12' },
+
+  { n: '12 x 45 Voc planset -> RED, opens at 591 V on a -10 degC morning',
+    mod: withMod({ plan: 12 }), r: [[448, 9.5], null, null, null, null, null],
+    sev: A.SEV.ERROR, findingHas: 'absolute input maximum' },
+
+  { n: '11 x 45 Voc planset -> not an overvoltage error',
+    mod: withMod({ plan: 11 }), r: [[448, 9.5], null, null, null, null, null],
+    sevBelow: A.SEV.ERROR },
+
+  { n: 'Planset conflicting with the measured string is flagged',
+    mod: withMod({ plan: 8 }), r: [[448, 9.5], null, null, null, null, null],
+    findingHas: 'planset says 8' },
+
+  { n: 'Unpowered input with no voltage produces no estimate',
+    mod: M45, r: [[0, 0], [0, -0], null, null, null, null], rows: 0 },
+
+  { n: 'Tempco sign is normalized - vendors publish +0.27 and -0.27 alike',
+    mod: withMod({ betaVoc: 0.27, betaVmp: 0.37 }), r: [[540, 0], null, null, null, null, null],
+    rows: 1, estLo: 12, estHi: 13,
+    note: 'must match the -0.27 case exactly' },
+
+  { n: 'String limits for a 45 Voc module: max 11, min 2',
+    mod: M45, limits: { maxAbs: 11, maxTrack: 9, minTrack: 2 } },
+];
+
+console.log('\nPW3 string counter - test matrix\n' + '='.repeat(78));
+for (const c of STR_CASES) {
+  const problems = [];
+  try {
+    const data = build(c.r || [null, null, null, null, null, null]);
+    const res = A.analyzeStrings(data, c.mod);
+
+    if (c.rows !== undefined && res.rows.length !== c.rows)
+      problems.push(`rows ${res.rows.length} != ${c.rows}`);
+    if (c.findings !== undefined && res.findings.length !== c.findings)
+      problems.push(`findings ${res.findings.length} != ${c.findings}`);
+    if (c.sev !== undefined && res.sev !== c.sev)
+      problems.push(`sev ${res.sev} != ${c.sev}`);
+    if (c.sevBelow !== undefined && res.sev >= c.sevBelow)
+      problems.push(`sev ${res.sev} should be < ${c.sevBelow}`);
+
+    if (c.estLo !== undefined || c.estHi !== undefined ||
+        c.estLoMax !== undefined || c.estHiMin !== undefined) {
+      const e = res.rows[0] && res.rows[0].est;
+      if (!e) problems.push('no estimate produced');
+      else {
+        if (c.estLo !== undefined && e.lo !== c.estLo) problems.push(`lo ${e.lo} != ${c.estLo}`);
+        if (c.estHi !== undefined && e.hi !== c.estHi) problems.push(`hi ${e.hi} != ${c.estHi}`);
+        if (c.estLoMax !== undefined && e.lo > c.estLoMax) problems.push(`lo ${e.lo} > ${c.estLoMax}`);
+        if (c.estHiMin !== undefined && e.hi < c.estHiMin) problems.push(`hi ${e.hi} < ${c.estHiMin}`);
+      }
+    }
+
+    if (c.findingHas) {
+      const hit = res.findings.some(f => f.txt.indexOf(c.findingHas) !== -1);
+      if (!hit) problems.push(`no finding containing "${c.findingHas}"`);
+    }
+
+    if (c.limits) {
+      const L = A.stringLimits(c.mod);
+      for (const k in c.limits)
+        if (L[k] !== c.limits[k]) problems.push(`${k} ${L[k]} != ${c.limits[k]}`);
+    }
+  } catch (e) { problems.push('THREW ' + e.message); }
+
+  if (problems.length) { fail++; console.log(`FAIL  ${c.n}\n      ${problems.join('; ')}`); }
+  else { pass++; console.log(`PASS  ${c.n}`); }
+  if (c.note) console.log(`      note: ${c.note}`);
+}
+
+// A count must never be asserted more precisely than the physics allows: for any
+// plausible module and any voltage, the estimate must bracket the true count.
+let strChecked = 0, strBad = 0, strCrash = 0;
+for (const voc of [37, 40.5, 45, 49.6, 54.2]) {
+  for (const ratio of [0.80, 0.83, 0.86]) {
+    for (const bv of [-0.24, -0.27, -0.35]) {
+      for (const tHi of [40, 55, 65]) {
+        const mod = { voc, vmp: voc * ratio, betaVoc: bv, betaVmp: bv - 0.10,
+                      tLo: 25, tHi, tRecord: -10, plan: 0 };
+        for (let n = 4; n <= 14; n++) {
+          for (const loaded of [true, false]) {
+            // Build the voltage a real n-module string would show at some cell
+            // temperature inside the assumed bracket, then require the estimate
+            // to contain n.
+            for (const t of [25, (25 + tHi) / 2, tHi]) {
+              const per = A.vAtTemp(loaded ? mod.vmp : mod.voc,
+                                    loaded ? mod.betaVmp : mod.betaVoc, t);
+              const v = n * per;
+              strChecked++;
+              try {
+                const e = A.estimateModules(v, loaded, mod);
+                if (!e) { strBad++; continue; }
+                if (n < e.lo || n > e.hi) {
+                  strBad++;
+                  if (strBad < 4) console.log(`RANGE MISS n=${n} v=${v.toFixed(1)} loaded=${loaded} -> [${e.lo},${e.hi}]`);
+                }
+              } catch (err) { strCrash++; }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+console.log(`String fuzz: ${strChecked} true-count checks, ${strBad} outside range, ${strCrash} crashes`);
+
+/* ---------- Module presets, cell-temp solver, label escaping ----------
+   Fixture is the STRUCTURE of a real Tesla One capture with synthetic values;
+   no customer or device identifiers appear here. */
+
+const REAL_PW = [
+  'AC Vitals', 'Max Current Output\t', 'Inverter State\tActive',
+  'Inverter Mode\tGrid Following', 'Frequency\t59.968Hz',
+  'AC Voltage (L-L)\t239.6V', 'Line 1\t119.8V', 'Line 2\t119.8V',
+  'Solar DC Inputs',
+  'MPPT 1', '', '350V / 6.6A', 'MPPT 2', '', '0V / 0.05A',
+  'MPPT 3', '', '245V / 6.25A', 'MPPT 4', '', '0V / 0.15A',
+  'MPPT 5', '', '0V / -0A', 'MPPT 6', '', '0V / -0A',
+  'Battery', 'Battery State\tActive', 'DCDC State (A/B)\t(Active / Active)',
+  'Powerwall Switch\tOn', 'Version\t26.18.3 184289b9',
+].join('\n');
+
+const GRID_BLOCK = [
+  'Grid', 'Contactor State\tClosed', 'Grid State\tCompliant',
+  'Line 1\t119.5V / 59.98Hz', 'Line 2\t119.5V / 59.98Hz', 'Line 3\t0V / 0Hz',
+].join('\n');
+
+const QC = A.MODULES[0];
+const QCMOD = { voc: QC.voc, vmp: QC.vmp, betaVoc: QC.bvoc, betaVmp: QC.bvmp,
+                tLo: 25, tHi: 55, tRecord: -10, plan: 0 };
+
+console.log('\nPW3 presets + cell-temp solver\n' + '='.repeat(78));
+let pfail = 0;
+function check(name, cond, detail) {
+  if (cond) { pass++; console.log(`PASS  ${name}`); }
+  else { fail++; pfail++; console.log(`FAIL  ${name}\n      ${detail}`); }
+}
+
+// -- Real capture parses with the blank line between label and value --
+const rp = A.parseVitals(REAL_PW);
+check('Real capture layout (blank line between label and V/A) -> 6 of 6',
+  rp.count === 6 && rp.values[1].v === 350 && rp.values[1].a === 6.6 &&
+  rp.values[3].v === 245 && rp.values[3].a === 6.25,
+  `count=${rp.count} ${JSON.stringify(rp.values)}`);
+
+// -- Grid block alone must yield nothing, and must not poison a combined paste --
+const rg = A.parseVitals(GRID_BLOCK);
+check('Grid block alone -> 0 MPPTs, no false readings from "Line 1 119.5V / 59.98Hz"',
+  rg.count === 0, `count=${rg.count} ${JSON.stringify(rg.values)}`);
+
+const rc = A.parseVitals(GRID_BLOCK + '\n' + REAL_PW);
+check('Grid + Powerwall pasted together -> still exactly the 6 MPPT values',
+  rc.count === 6 && rc.values[1].v === 350 && rc.values[3].v === 245,
+  `count=${rc.count} ${JSON.stringify(rc.values)}`);
+
+// -- Parenthesised labels must not be read as regex groups --
+check('Label "AC Voltage (L-L)" is regex-escaped and matches',
+  A.grabLabelled(REAL_PW, 'AC Voltage (L-L)') === '239.6V',
+  `got ${JSON.stringify(A.grabLabelled(REAL_PW, 'AC Voltage (L-L)'))}`);
+check('Label "DCDC State (A/B)" is regex-escaped and matches',
+  A.grabLabelled(REAL_PW, 'DCDC State (A/B)') === '(Active / Active)',
+  `got ${JSON.stringify(A.grabLabelled(REAL_PW, 'DCDC State (A/B)'))}`);
+
+// -- Solver: two strings, one roof, one temperature --
+const solved = A.solveCellTemp([350, 245], QCMOD, 25, 55);
+check('Two strings solve to a single shared cell temperature',
+  solved && solved.solved && Math.abs(solved.t - 43.5) < 0.2,
+  `${JSON.stringify(solved)}`);
+check('Solved counts are 10 and 7 modules',
+  solved && solved.counts[0] === 10 && solved.counts[1] === 7,
+  `${JSON.stringify(solved && solved.counts)}`);
+
+// -- End to end through analyzeStrings --
+const rows6 = [1,2,3,4,5,6].map(i => rp.values[i] ? [rp.values[i].v, rp.values[i].a] : null);
+const sres = A.analyzeStrings(build(rows6), QCMOD);
+const pins = sres.rows.filter(r => r.est.pinned).map(r => r.est.pinned);
+check('End to end: pinned counts 10 + 7 = 17 modules (6.97 kW)',
+  pins.length === 2 && pins[0] === 10 && pins[1] === 7,
+  `pins=${JSON.stringify(pins)}`);
+
+// -- The QCELLS 410 ceiling --
+const qlim = A.stringLimits(QCMOD);
+check('Q.PEAK 410 ceiling: 11 modules absolute, 9 for MPPT tracking, min 2',
+  qlim.maxAbs === 11 && qlim.maxTrack === 9 && qlim.minTrack === 2,
+  JSON.stringify(qlim));
+
+// -- Every preset must be self-consistent and yield a sane ceiling --
+for (const m of A.MODULES) {
+  const mm = { voc: m.voc, vmp: m.vmp, betaVoc: m.bvoc, betaVmp: m.bvmp,
+               tLo: 25, tHi: 55, tRecord: -10, plan: 0 };
+  const L = A.stringLimits(mm);
+  check(`Preset "${m.label}" -> max ${L.maxAbs}/string, Vmp<Voc, sane limits`,
+    m.vmp < m.voc && m.bvoc < 0 && m.bvmp < 0 &&
+    L.maxAbs >= 8 && L.maxAbs <= 14 && L.minTrack >= 1 &&
+    L.maxAbs * A.vAtTemp(m.voc, m.bvoc, -10) <= 550,
+    JSON.stringify(L));
+}
+
+// -- Solver must refuse a fit that is not there --
+const noFit = A.solveCellTemp([350, 247.3], QCMOD, 25, 55);
+check('Strings that cannot share one temperature are reported unsolved',
+  noFit && !noFit.solved, `${JSON.stringify(noFit)}`);
+
+// -- Feature stays off with no module selected --
+const offRes = A.analyzeStrings(build(rows6), null);
+check('No module selected -> solver never runs, no rows, no findings',
+  offRes.rows.length === 0 && offRes.findings.length === 0 && offRes.solvedT === undefined,
+  JSON.stringify(offRes));
+
+// -- Non-finite temperature bounds must return null, not hang the tab --
+check('Infinite cell-temp bounds terminate instead of looping forever',
+  A.solveCellTemp([350, 245], QCMOD, -Infinity, Infinity) === null &&
+  A.solveCellTemp([350, 245], QCMOD, 25, Infinity) === null &&
+  A.solveCellTemp([350, 245], QCMOD, NaN, NaN) === null,
+  'non-finite bounds must return null');
+
+// -- Solver fuzz: must never throw or invent an impossible count --
+let sChk = 0, sBad = 0;
+for (const a of [0, 60, 245, 350, 480, 550, 1e6, -5]) {
+  for (const b of [0, 100, 245, 350, 1e6]) {
+    for (const tl of [-40, 0, 25, 60]) {
+      for (const th of [-40, 25, 55, 90]) {
+        sChk++;
+        try {
+          const r = A.solveCellTemp([a, b], QCMOD, Math.min(tl,th), Math.max(tl,th));
+          if (r && r.counts.some(c => !isFinite(c) || c < 1)) sBad++;
+        } catch (e) { sBad++; }
+      }
+    }
+  }
+}
+console.log(`Solver fuzz: ${sChk} combinations, ${sBad} bad results`);
+
+/* ---------- Site review: gateway + multiple Powerwalls ----------
+   All fixtures synthetic; no device serials or customer identifiers. */
+
+const GW_OK = [
+  'Grid', 'Contactor State\tClosed', 'Grid State\tCompliant',
+  'Line 1\t119.5V / 59.98Hz', 'Line 2\t119.5V / 59.98Hz', 'Line 3\t0V / 0Hz',
+].join('\n');
+
+function mkUnit(o) {
+  o = o || {};
+  return [
+    'AC Vitals', 'Max Current Output\t',
+    'Inverter State\t' + (o.state || 'Active'),
+    'Inverter Mode\t' + (o.mode || 'Grid Following'),
+    'Frequency\t' + (o.freq || '59.968') + 'Hz',
+    'AC Voltage (L-L)\t' + (o.vll || '239.6') + 'V',
+    'Line 1\t' + (o.l1 || '119.8') + 'V',
+    'Line 2\t' + (o.l2 || '119.8') + 'V',
+    'Solar DC Inputs',
+    'MPPT 1', '', (o.m1 || '350V / 6.6A'),
+    'MPPT 2', '', '0V / 0.05A',
+    'MPPT 3', '', (o.m3 || '245V / 6.25A'),
+    'MPPT 4', '', '0V / 0.15A',
+    'MPPT 5', '', '0V / -0A',
+    'MPPT 6', '', '0V / -0A',
+    'Battery',
+    'Battery State\t' + (o.bat || 'Active'),
+    'DCDC State (A/B)\t' + (o.dcdc || '(Active / Active)'),
+    'Powerwall Switch\t' + (o.sw || 'On'),
+    'Version\t' + (o.ver || '26.18.3 184289b9'),
+  ].join('\n');
+}
+
+const S13 = A.VARIANTS['13'];
+function U(label, opts) { return { label, spec: S13, parsed: A.parseUnit(mkUnit(opts)) }; }
+function siteHas(site, frag) { return site.findings.some(f => f.txt.indexOf(frag) !== -1); }
+
+console.log('\nPW3 site review\n' + '='.repeat(78));
+
+// -- Section scoping: "Line 1" exists in BOTH gateway Grid and unit AC Vitals --
+const gwp = A.parseGateway(GW_OK);
+check('Gateway parses: contactor, grid state, and per-line V/Hz',
+  gwp.scoped && gwp.contactor === 'Closed' && gwp.gridState === 'Compliant' &&
+  gwp.lines[0].v === 119.5 && gwp.lines[0].hz === 59.98 && gwp.lines[2].v === 0,
+  JSON.stringify(gwp));
+
+const up = A.parseUnit(mkUnit());
+check('Unit parses AC/Battery fields and 6 MPPTs, Line 1 scoped to AC Vitals',
+  up.line1 === 119.8 && up.freq === 59.968 && up.vll === 239.6 &&
+  up.dcdc === '(Active / Active)' && up.pwSwitch === 'On' && up.mppt.count === 6,
+  JSON.stringify({l1:up.line1,f:up.freq,dc:up.dcdc,n:up.mppt.count}));
+
+check('A gateway paste alone yields no MPPT readings',
+  A.parseUnit(GW_OK).mppt.count === 0, 'gateway must not produce MPPT values');
+
+// -- Single healthy unit must stay clean --
+const one = A.analyzeSite(gwp, [U('PW-1')], QCMOD);
+check('One healthy unit + healthy gateway -> nothing flagged',
+  one.sev === 0 && one.findings.length === 0 && one.units[0].status.cls === 'green',
+  `sev=${one.sev} ${JSON.stringify(one.findings.map(f=>f.t))}`);
+
+// -- THE headline case: faults invisible unit-by-unit --
+const dcdcSite = A.analyzeSite(gwp, [U('PW-1'), U('PW-2', { dcdc: '(Active / Inactive)' })], QCMOD);
+check('One DC-DC channel down is an ERROR even though that unit reads Healthy alone',
+  dcdcSite.sev === A.SEV.ERROR && siteHas(dcdcSite, 'DC-DC channel B') &&
+  dcdcSite.units[1].status.cls === 'green',
+  `sev=${dcdcSite.sev} unitCls=${dcdcSite.units[1].status.cls}`);
+
+check('Both DC-DC channels down is reported distinctly',
+  siteHas(A.analyzeSite(gwp, [U('PW-1', { dcdc: '(Inactive / Inactive)' })], QCMOD),
+    'both DC-DC channels'), 'expected both-channel wording');
+
+const swSite = A.analyzeSite(gwp, [U('PW-1'), U('PW-2', { sw: 'Off' })], QCMOD);
+check('Powerwall Switch Off on one unit of two -> ERROR',
+  swSite.sev === A.SEV.ERROR && siteHas(swSite, 'not contributing'),
+  `sev=${swSite.sev}`);
+
+// -- Firmware skew --
+const fwSite = A.analyzeSite(gwp, [U('PW-1'), U('PW-2', { ver: '26.14.1 77c2a10e' })], QCMOD);
+check('Firmware skew across units is flagged',
+  siteHas(fwSite, 'Firmware differs across units'), 'expected firmware finding');
+check('Matching firmware on all units is reported as ok',
+  siteHas(A.analyzeSite(gwp, [U('PW-1'), U('PW-2')], QCMOD), 'same firmware'),
+  'expected same-firmware ok');
+
+// -- Mode disagreement: one forming while another follows --
+check('Units in different inverter modes -> ERROR',
+  A.analyzeSite(gwp, [U('PW-1'), U('PW-2', { mode: 'Grid Forming' })], QCMOD).sev === A.SEV.ERROR,
+  'mode mismatch must be an error');
+
+// -- AC bus coherence, with loose thresholds for non-simultaneous pastes --
+check('Small frequency drift between pastes is NOT flagged (0.03 Hz)',
+  !siteHas(A.analyzeSite(gwp, [U('PW-1', { freq: '59.968' }), U('PW-2', { freq: '59.998' })], QCMOD),
+    'Frequency differs'), 'normal drift must not warn');
+check('Structural frequency gap IS flagged (1.2 Hz)',
+  siteHas(A.analyzeSite(gwp, [U('PW-1', { freq: '59.9' }), U('PW-2', { freq: '61.1' })], QCMOD),
+    'Frequency differs'), 'large gap must warn');
+check('Wide L-L spread between units is flagged',
+  siteHas(A.analyzeSite(gwp, [U('PW-1', { vll: '239.6' }), U('PW-2', { vll: '208.0' })], QCMOD),
+    'AC Voltage (L-L) differs'), 'expected vll spread finding');
+check('Unit Line 1 far from the gateway reading is flagged',
+  siteHas(A.analyzeSite(gwp, [U('PW-1', { l1: '104.0' })], QCMOD), 'the gateway reads'),
+  'expected gateway/unit line delta finding');
+
+// -- Gateway state --
+check('Open contactor with units grid following -> ERROR (not islanding)',
+  A.analyzeSite(A.parseGateway(GW_OK.replace('Closed', 'Open')), [U('PW-1')], QCMOD).sev === A.SEV.ERROR,
+  'open contactor while following must be an error');
+check('Open contactor with units grid forming -> informational island, not a fault',
+  A.analyzeSite(A.parseGateway(GW_OK.replace('Closed', 'Open')),
+    [U('PW-1', { mode: 'Grid Forming' })], QCMOD).sev < A.SEV.ERROR,
+  'a consistent island must not be an error');
+check('Three-phase gateway (Line 3 live) is noted',
+  siteHas(A.analyzeSite(A.parseGateway(GW_OK.replace('Line 3\t0V / 0Hz', 'Line 3\t119.5V / 59.98Hz')),
+    [U('PW-1')], QCMOD), 'three-phase service'), 'expected three-phase note');
+
+// -- Production balance, normalised per module --
+const prodSite = A.analyzeSite(gwp,
+  [U('PW-1'), U('PW-2', { m1: '350V / 1.2A', m3: '245V / 1.0A' })], QCMOD);
+check('A unit at a third the per-module output is flagged',
+  siteHas(prodSite, 'W per module'), 'expected per-module production finding');
+check('Equal per-module output is not flagged',
+  !siteHas(A.analyzeSite(gwp, [U('PW-1'), U('PW-2')], QCMOD), 'W per module'),
+  'matched units must not warn');
+check('Without a module selected, production comparison is skipped with a note',
+  siteHas(A.analyzeSite(gwp, [U('PW-1'), U('PW-2')], null), 'watts per module are'),
+  'expected the select-a-module note');
+
+// -- Unit cap --
+check('More than 4 base units on one gateway is flagged',
+  siteHas(A.analyzeSite(gwp, [U('a'), U('b'), U('c'), U('d'), U('e')], QCMOD),
+    'maximum of 4 base units'), 'expected unit-cap finding');
+
+// -- Per-unit string counting still runs inside site mode --
+check('String counts resolve per unit inside a site review (10 + 7 = 17)',
+  one.units[0].modules === 17, `got ${one.units[0].modules} modules`);
+
+// -- Site fuzz: no combination of malformed pastes may throw --
+let siteChk = 0, siteCrash = 0;
+const FRAGS2 = ['', 'Grid', 'AC Vitals', 'Battery', 'Solar DC Inputs',
+  'MPPT 1\n350V / 6.6A', 'DCDC State (A/B)\t()', 'Powerwall Switch\t',
+  'Frequency\tNaNHz', 'Line 1\t-0V / -0Hz', 'Inverter Mode\t',
+  'AC Voltage (L-L)\tabcV', 'Version\t', '\n\n\n', '((((', 'MPPT 7\n1V / 1A'];
+for (const a of FRAGS2) {
+  for (const b of FRAGS2) {
+    siteChk++;
+    try {
+      const g = A.parseGateway(a);
+      const u = A.parseUnit(b);
+      A.analyzeSite(g, [{ label: 'X', spec: S13, parsed: u },
+                        { label: 'Y', spec: S13, parsed: A.parseUnit(a) }], QCMOD);
+      A.analyzeSite(null, [{ label: 'X', spec: S13, parsed: u }], null);
+    } catch (e) {
+      siteCrash++;
+      if (siteCrash < 4) console.log(`SITE CRASH ${JSON.stringify(a)}/${JSON.stringify(b)}: ${e.message}`);
+    }
+  }
+}
+console.log(`Site fuzz: ${siteChk} combinations, ${siteCrash} crashes`);
+
+/* ---------- AC side ---------- */
+
+function AC(o) {
+  o = o || {};
+  return { line1: o.l1 === undefined ? 119.8 : o.l1,
+           line2: o.l2 === undefined ? 119.8 : o.l2,
+           line3: o.l3 === undefined ? null : o.l3,
+           vll: o.vll === undefined ? 239.6 : o.vll,
+           freq: o.freq === undefined ? 59.968 : o.freq,
+           maxCurrent: o.maxA === undefined ? null : o.maxA,
+           inverterState: o.state === undefined ? 'Active' : o.state };
+}
+function acHas(res, frag) { return res.findings.some(f => f.txt.indexOf(frag) !== -1); }
+
+console.log('\nPW3 AC side\n' + '='.repeat(78));
+
+// -- The real field capture must come back clean --
+const acReal = A.analyzeAC(AC(), { dcW: 3841 });
+check('Real capture AC values (119.8/119.8, 239.6 V, 59.968 Hz) -> nothing flagged',
+  acReal.sev === 0 && acReal.findings.length === 0,
+  JSON.stringify(acReal.findings.map(f => f.txt.slice(0, 60))));
+
+// -- ANSI C84.1 Range A vs IEEE 1547 cease-to-export --
+check('126 V per leg is inside Range A (not flagged)',
+  !acHas(A.analyzeAC(AC({ l1: 126, l2: 126, vll: 252 })), 'Range A'), 'boundary must pass');
+check('128 V per leg is outside Range A -> warning, not error',
+  acHas(A.analyzeAC(AC({ l1: 128, l2: 128, vll: 256 })), 'Range A') &&
+  A.analyzeAC(AC({ l1: 128, l2: 128, vll: 256 })).sev === A.SEV.WARN, 'expected a warning');
+check('134 V per leg is outside IEEE 1547 -> ERROR, explains loss of export',
+  A.analyzeAC(AC({ l1: 134, l2: 134, vll: 268 })).sev === A.SEV.ERROR &&
+  acHas(A.analyzeAC(AC({ l1: 134, l2: 134, vll: 268 })), 'cease'), 'expected 1547 error');
+check('100 V per leg (brownout) -> ERROR',
+  A.analyzeAC(AC({ l1: 100, l2: 100, vll: 200 })).sev === A.SEV.ERROR, 'low voltage must error');
+
+// -- Frequency --
+check('59.968 Hz is normal', !acHas(A.analyzeAC(AC()), 'frequency is'), 'must not flag');
+check('58.9 Hz is outside IEEE 1547 -> ERROR',
+  A.analyzeAC(AC({ freq: 58.9 })).sev === A.SEV.ERROR, 'low frequency must error');
+check('60.8 Hz is outside IEEE 1547 -> ERROR',
+  A.analyzeAC(AC({ freq: 60.8 })).sev === A.SEV.ERROR, 'high frequency must error');
+
+// -- Leg balance and the split-phase L-L identity --
+check('Legs 8 V apart are flagged as imbalance',
+  acHas(A.analyzeAC(AC({ l1: 124, l2: 116, vll: 240 })), 'legs differ by'), 'expected imbalance');
+check('L-L that does not equal L1+L2 is flagged',
+  acHas(A.analyzeAC(AC({ l1: 119.8, l2: 119.8, vll: 208 })), 'legs sum to') ||
+  acHas(A.analyzeAC(AC({ l1: 119.8, l2: 119.8, vll: 208 })), 'square-root-of-3'),
+  'expected an L-L consistency finding');
+check('A sqrt(3) L-L relationship is identified as three-phase, not a sense fault',
+  acHas(A.analyzeAC(AC({ l1: 120, l2: 120, vll: 207.8 })), 'square-root-of-3'),
+  'expected the three-phase wording');
+
+// -- Configured output rating from Max Current Output --
+check('Max Current Output 48 A maps to 11.5 kW / 60 A OCPD',
+  A.ratingFromCurrent(48).kw === 11.5 && A.ratingFromCurrent(48).ocpd === 60, 'rating map');
+check('Max Current Output 31.7 A maps to 7.6 kW / 40 A OCPD',
+  A.ratingFromCurrent(31.7).kw === 7.6 && A.ratingFromCurrent(31.7).ocpd === 40, 'rating map');
+check('An unrecognised Max Current Output is queried, not silently accepted',
+  acHas(A.analyzeAC(AC({ maxA: 37 })), 'does not match any published'), 'expected the query');
+check('A blank Max Current Output (as in the real capture) is simply absent',
+  A.analyzeAC(AC({ maxA: null })).rating === null &&
+  !acHas(A.analyzeAC(AC({ maxA: null })), 'does not match'), 'blank must not warn');
+
+// -- DC present but not inverting --
+check('DC flowing with Inverter State Standby -> ERROR (not nightfall)',
+  A.analyzeAC(AC({ state: 'Standby' }), { dcW: 3841 }).sev === A.SEV.ERROR &&
+  acHas(A.analyzeAC(AC({ state: 'Standby' }), { dcW: 3841 }), 'not being converted'),
+  'expected the DC-present error');
+check('Standby with no DC is not an AC fault (that is just night)',
+  A.analyzeAC(AC({ state: 'Standby' }), { dcW: 0 }).sev === 0, 'night must be silent');
+
+// -- Clipping and DC/AC ratio --
+check('DC above the configured AC limit is reported as expected clipping, not a fault',
+  acHas(A.analyzeAC(AC({ maxA: 24 }), { dcW: 7000 }), 'clipping right now') &&
+  A.analyzeAC(AC({ maxA: 24 }), { dcW: 7000 }).sev <= A.SEV.INFO, 'clipping is informational');
+check('A 1.9:1 DC/AC design ratio is flagged for confirmation',
+  acHas(A.analyzeAC(AC({ maxA: 24 }), { arrayKw: 11 }), 'DC/AC ratio'), 'expected ratio warning');
+check('A 1.2:1 DC/AC ratio is not flagged',
+  !acHas(A.analyzeAC(AC({ maxA: 48 }), { arrayKw: 13.8 }), 'DC/AC ratio'), 'normal ratio');
+check('An array above the 20 kW DC per-unit maximum is an ERROR',
+  A.analyzeAC(AC({ maxA: 48 }), { arrayKw: 22 }).sev === A.SEV.ERROR, 'over 20 kW must error');
+
+// -- AC data reaches the single-unit path from a paste --
+const pvAc = A.parseVitals(mkUnit({ vll: '239.6' }));
+check('parseVitals exposes AC context scoped to the AC Vitals section',
+  pvAc.ac && pvAc.ac.line1 === 119.8 && pvAc.ac.vll === 239.6 && pvAc.ac.freq === 59.968,
+  JSON.stringify(pvAc.ac));
+check('A gateway+unit combined paste does not read gateway Line 1 as the unit AC',
+  A.parseVitals(GW_OK + '\n' + mkUnit()).ac.line1 === 119.8,
+  'must take 119.8 from AC Vitals, not 119.5 from Grid');
+
+// -- AC severity reaches the site verdict --
+const acSite = A.analyzeSite(gwp, [U('PW-1', { vll: '268', l1: '134', l2: '134' })], QCMOD);
+check('An AC fault on one unit makes the site verdict Fault',
+  acSite.sev === A.SEV.ERROR && acSite.units[0].status.cls === 'red',
+  `sev=${acSite.sev} cls=${acSite.units[0].status.cls}`);
+
+// -- Gateway AC is checked too --
+check('Gateway line voltage out of 1547 range is flagged against the Gateway',
+  A.analyzeSite(A.parseGateway(GW_OK.replace(/119\.5V/g, '136.0V')), [U('PW-1')], QCMOD)
+    .findings.some(f => f.txt.indexOf('Gateway') !== -1 && f.txt.indexOf('Line') !== -1),
+  'expected a gateway AC finding');
+
+// -- Boundary inclusivity: floating point must not flag a reading on the limit --
+check('Range A limits are inclusive at both ends (114 and 126 V)',
+  A.vClass(126, 120) === 'ok' && A.vClass(114, 120) === 'ok' &&
+  A.vClass(252, 240) === 'ok' && A.vClass(228, 240) === 'ok',
+  `126->${A.vClass(126,120)} 114->${A.vClass(114,120)}`);
+check('Just outside Range A is classified "range", not "ok"',
+  A.vClass(126.5, 120) === 'range' && A.vClass(113.5, 120) === 'range',
+  `126.5->${A.vClass(126.5,120)}`);
+check('IEEE 1547 limits are inclusive (105.6 and 132 V)',
+  A.vClass(132, 120) === 'range' && A.vClass(105.6, 120) === 'range' &&
+  A.vClass(132.5, 120) === 'trip' && A.vClass(105, 120) === 'trip',
+  `132->${A.vClass(132,120)} 105.6->${A.vClass(105.6,120)}`);
+
+// -- Non-finite readings must never reach the finding text --
+check('acNum rejects NaN, Infinity, non-numbers and non-positive values',
+  A.acNum(NaN) === null && A.acNum(Infinity) === null && A.acNum(-Infinity) === null &&
+  A.acNum('119.8') === null && A.acNum(0) === null && A.acNum(-1) === null &&
+  A.acNum(119.8) === 119.8, 'guard must reject all of these');
+check('Infinity frequency produces no finding rather than "Infinity Hz"',
+  A.analyzeAC(AC({ freq: Infinity })).findings.length === 0,
+  JSON.stringify(A.analyzeAC(AC({ freq: Infinity })).findings.map(f => f.txt.slice(0, 50))));
+check('NaN voltages produce no findings',
+  A.analyzeAC(AC({ l1: NaN, l2: NaN, vll: NaN })).findings.length === 0,
+  'NaN must be silent');
+
+// -- AC fuzz --
+let acChk = 0, acBad = 0;
+const NUMS = [null, 0, -1, 0.001, 60, 119.8, 126, 134, 240, 1e6, NaN, Infinity];
+for (const l1 of NUMS) for (const vll of NUMS) for (const f of NUMS) {
+  acChk++;
+  try {
+    const r = A.analyzeAC({ line1: l1, line2: l1, line3: null, vll: vll, freq: f,
+                            maxCurrent: l1, inverterState: 'Active' },
+                          { dcW: 3841, arrayKw: 7 });
+    if (!r || !isFinite(r.sev)) acBad++;
+    for (const fd of r.findings) if (/NaN|Infinity|undefined/.test(fd.txt)) acBad++;
+  } catch (e) { acBad++; if (acBad < 4) console.log(`AC CRASH ${l1}/${vll}/${f}: ${e.message}`); }
+}
+console.log(`AC fuzz: ${acChk} combinations, ${acBad} bad results`);
+
+/* ---------- CSS token integrity ----------
+   Every var(--x) must resolve to a token declared in :root. An undefined custom
+   property fails SILENTLY in the browser - the declaration is simply dropped, so
+   a card loses its background or radius with no error anywhere. Caught exactly
+   that: --err, --field and --r-input were referenced but never defined. */
+(function () {
+  const css = (html.match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
+  const rootBlock = (css.match(/:root\{([\s\S]*?)\n\}/) || [, ''])[1];
+  const defined = new Set((rootBlock.match(/--[\w-]+\s*:/g) || [])
+    .map(s => s.replace(/\s*:$/, '')));
+  const referenced = new Set((css.match(/var\((--[\w-]+)\)/g) || [])
+    .map(s => s.replace(/^var\(|\)$/g, '')));
+  const missing = [...referenced].filter(v => !defined.has(v)).sort();
+  check('Every CSS custom property referenced is defined in :root',
+    missing.length === 0, `undefined: ${missing.join(', ')}`);
+  check('Single <style> and single <script> block (harness + offline contract)',
+    (html.match(/<style>/g) || []).length === 1 &&
+    (html.match(/<script>/g) || []).length === 1,
+    'exactly one of each is required');
+  check('No external network references in the document',
+    !/(src|href)\s*=\s*["']https?:/i.test(html.replace(/<!--[\s\S]*?-->/g, '')),
+    'the file must work offline from file://');
+  check('Crawler-exclusion and referrer directives intact',
+    (html.match(/noindex/g) || []).length >= 3 && /no-referrer/.test(html),
+    'DESIGN.md requires these on every page');
+})();
+
+
+
+
+
+// No input may throw, including hostile module data.
+let mCrash = 0, mChecked = 0;
+const WEIRD = [0, -1, NaN, Infinity, 1e9, 0.0001];
+for (const voc of WEIRD) for (const vmp of WEIRD) for (const b of WEIRD) for (const t of WEIRD) {
+  mChecked++;
+  try {
+    const mod = { voc, vmp, betaVoc: b, betaVmp: b, tLo: t, tHi: t, tRecord: t, plan: 3 };
+    A.estimateModules(400, true, mod);
+    A.stringLimits(mod);
+    A.analyzeStrings(build([[400, 9], [400, 9], null, null, null, null]), mod);
+  } catch (e) { mCrash++; if (mCrash < 4) console.log(`MOD CRASH ${voc}/${vmp}/${b}/${t}: ${e.message}`); }
+}
+console.log(`Module fuzz: ${mChecked} combinations, ${mCrash} crashes`);
+
+
+
 // Paste fuzz: no input may throw, and a parse that finds nothing must say so.
 const FRAGS = ['MPPT', 'MPPT 1', 'mppt7', 'MPPT 12', '0V', '/ -0A', '380V / 9.5A',
   'V / A', 'AC Voltage (L-L)\t231.4V', '', '\n', '\t\t', '   ', '−0', 'NaN',
@@ -356,4 +968,4 @@ for (const a of FRAGS) for (const b of FRAGS) for (const c of FRAGS) {
 }
 console.log(`Paste fuzz: ${pChecked} combinations, ${pCrash} crashes, ${pBadMsg} bad messages`);
 
-process.exit(fail || crashes || pCrash || pBadMsg ? 1 : 0);
+process.exit(fail || crashes || pCrash || pBadMsg || strBad || strCrash || mCrash || sBad || siteCrash || acBad ? 1 : 0);

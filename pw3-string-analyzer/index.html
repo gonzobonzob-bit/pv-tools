@@ -111,7 +111,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
 .config-line{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:2px 0}
 .config-label{color:var(--muted);flex-shrink:0}
 .config-value{font-weight:600;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:13px;min-width:0;overflow-wrap:anywhere}
-.j-in{color:var(--ok)}.j-out{color:var(--warn)}.j-unk{color:var(--muted)}.j-na{color:var(--faint)}
+.j-in{color:var(--ok)}.j-out{color:var(--warn)}.j-unk{color:var(--muted)}.j-na{color:var(--muted)}.j-error{color:var(--danger)}
 .findings-section{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px}
 .findings-title{font-size:12px;font-weight:600;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-bottom:10px}
 .finding{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:var(--r-ctl);margin-bottom:8px;
@@ -125,6 +125,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
 .diagnostic-note b{color:var(--ink)}
 .footer{font-size:11px;color:var(--faint);text-align:center;margin-top:20px;line-height:1.6}
 .footer .credit{display:inline-block;margin-top:6px;letter-spacing:.04em}
+.footer .advisory{color:var(--warn);font-weight:600;font-size:12px}
 /* Paste-from-Tesla-One card */
 .paste-hint{font-size:12px;color:var(--muted);line-height:1.5;margin:8px 0 10px}
 #pasteBox{width:100%;font-family:var(--mono);font-size:16px;line-height:1.45;padding:10px 12px;
@@ -143,7 +144,83 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
 .paste-chip{display:inline-block;margin-top:9px;margin-right:6px;font-size:11px;color:var(--muted);
   background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
 .paste-chip b{color:var(--ink);font-weight:600}
-@media (max-width:400px){.mppt-pair{grid-template-columns:1fr}.paste-actions{grid-template-columns:1fr}}
+/* Module data card - collapsible, optional. Native <details>: no JS, works offline. */
+details.card{padding:0}
+details.card>summary{list-style:none;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:44px;
+  padding:12px 16px;cursor:pointer;font-size:12px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted)}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"+";margin-left:auto;font-size:20px;line-height:1;color:var(--faint);font-weight:400}
+details.card[open]>summary::after{content:"\2212"}
+details.card>summary:focus-visible{outline:2px solid var(--sun);outline-offset:-2px;border-radius:var(--r-card)}
+.opt{text-transform:none;letter-spacing:0;font-weight:400;color:var(--faint);font-size:11px}
+.details-body{padding:0 16px 16px}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mod-field{display:flex;flex-direction:column;gap:6px}
+.mod-field label{font-size:12px;color:var(--muted);font-weight:600}
+.mod-field .unit{color:var(--faint);font-weight:400}
+.mod-field select{width:100%;min-height:44px;padding:10px 12px;font-size:15px;
+  background:var(--surface-2);color:var(--ink);border:1px solid var(--line);
+  border-radius:var(--r-ctl);font-family:inherit;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 20px,calc(100% - 13px) 20px;background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat}
+.mod-field select:focus{outline:2px solid var(--sun);outline-offset:-1px;border-color:var(--sun)}
+.mod-live{font-size:13px;line-height:1.6;color:var(--muted);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--r-ctl);padding:11px 13px;margin-bottom:14px}
+.mod-live b{color:var(--ink);font-variant-numeric:tabular-nums}
+.mod-live .cap{color:var(--sun);font-weight:600}
+.mod-live.empty{display:none}
+/* Site mode */
+.mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.mode-tabs button{min-height:44px;padding:11px 12px;font-size:14px;font-weight:600;
+  font-family:inherit;background:var(--surface-2);color:var(--muted);border:1px solid var(--line);
+  border-radius:var(--r-ctl);cursor:pointer}
+.mode-tabs button[aria-selected="true"]{background:var(--sun);color:#0f1115;border-color:var(--sun)}
+.unit-block{border:1px solid var(--line);border-radius:var(--r-ctl);padding:12px;margin-bottom:10px;
+  background:var(--surface-2)}
+.unit-head{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.unit-head input[type=text]{flex:1;min-height:44px;padding:8px 11px;font-size:14px;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-ctl);
+  font-family:inherit}
+.unit-head .rm{min-height:44px;min-width:44px;background:transparent;color:var(--faint);
+  border:1px solid var(--line);border-radius:var(--r-ctl);font-size:18px;cursor:pointer;line-height:1}
+.unit-block textarea{width:100%;min-height:90px;padding:10px 12px;font-size:13px;
+  font-family:var(--mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);
+  border-radius:var(--r-ctl);resize:vertical;box-sizing:border-box}
+.unit-block select{min-height:44px;padding:8px 11px;font-size:13px;background:var(--bg);
+  color:var(--ink);border:1px solid var(--line);border-radius:var(--r-ctl);font-family:inherit;
+  margin-top:8px;width:100%}
+.add-unit{width:100%;min-height:44px;background:transparent;color:var(--sun);
+  border:1px dashed var(--line);border-radius:var(--r-ctl);font-size:14px;font-weight:600;
+  font-family:inherit;cursor:pointer;margin-bottom:6px}
+.add-unit:disabled{color:var(--faint);cursor:default}
+.site-card{border:1px solid var(--line);border-left-width:4px;border-radius:var(--r-ctl);
+  padding:11px 13px;background:var(--surface-2);margin-bottom:9px}
+.site-card.green{border-left-color:var(--ok)}
+.site-card.yellow{border-left-color:var(--warn)}
+.site-card.red{border-left-color:var(--danger)}
+.site-card.grey{border-left-color:var(--faint)}
+.site-card .sc-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.site-card .sc-name{font-weight:600;font-size:14px;overflow-wrap:anywhere;min-width:0}
+.site-card .sc-verdict{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.site-card.green .sc-verdict{color:var(--ok)}
+.site-card.yellow .sc-verdict{color:var(--warn)}
+.site-card.red .sc-verdict{color:var(--danger)}
+.site-card.grey .sc-verdict{color:var(--faint)}
+.site-card .sc-meta{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:5px;
+  font-variant-numeric:tabular-nums}
+.mod-note{font-size:12px;color:var(--muted);line-height:1.55;margin-top:14px}
+.mod-note b{color:var(--ink)}
+/* String estimate rows */
+.str-row{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:8px 0;border-top:1px solid var(--line)}
+.str-row:first-of-type{border-top:none}
+.str-id{color:var(--muted);flex-shrink:0}
+.str-val{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;font-weight:600;min-width:0}
+.str-val .rng{color:var(--muted);font-weight:400}
+.str-limits{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.str-limits b{color:var(--ink)}
+@media (max-width:400px){.mppt-pair{grid-template-columns:1fr}.paste-actions{grid-template-columns:1fr}.mod-grid{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -151,14 +228,42 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
 <header class="appbar">
   <a class="back" href="../">&larr; PV Tools</a>
   <span class="tool-name">PW3 String Analyzer</span>
-  <span class="ver">v4.3</span>
+  <span class="ver">v5.2</span>
 </header>
 
 <div class="container">
 
-  <p class="lede">Tesla Powerwall 3 &mdash; MPPT configuration diagnostic. Enter the six Solar DC Input readings from Tesla One and get verdicts on overcurrent, overvoltage, jumpers, dead strings and imbalance.</p>
+  <p class="lede">Tesla Powerwall 3 &mdash; MPPT configuration diagnostic. Enter the six Solar DC Input readings from Tesla One and get verdicts on overcurrent, overvoltage, jumpers, dead strings and imbalance. AC service voltage and frequency are checked against ANSI C84.1 and IEEE 1547 &mdash; the utility-service-voltage standards that determine when the inverter has to stop exporting. Switch to <b>Full site</b> to review a gateway and up to four Powerwalls together, including cross-unit checks that no single screen can show.</p>
 
-  <div class="card">
+  <div class="mode-tabs" role="tablist">
+    <button type="button" id="tabUnit" role="tab" aria-selected="true">Single unit</button>
+    <button type="button" id="tabSite" role="tab" aria-selected="false">Full site</button>
+  </div>
+
+  <div class="card" id="sitePanel" hidden>
+    <div class="card-heading">Full site review</div>
+    <div class="mod-note" style="margin-top:0;margin-bottom:13px">Paste each device from
+      <b>Tesla One &rarr; System &rarr; Devices</b>, one at a time. Open a device, copy its
+      vitals, paste below. Readings need not be simultaneous &mdash; cross-unit tolerances
+      allow for the gap.</div>
+
+    <div class="mod-field" style="margin-bottom:13px">
+      <label for="gwPaste">Gateway <span class="unit">optional</span></label>
+      <textarea id="gwPaste" rows="3" placeholder="Grid&#10;Contactor State  Closed&#10;Grid State  Compliant&#10;Line 1  119.5V / 59.98Hz"></textarea>
+    </div>
+
+    <div id="unitList"></div>
+    <button type="button" class="add-unit" id="addUnit">+ Add Powerwall</button>
+    <div class="mod-note">Up to 4 Powerwall 3 base units per gateway. Expansion units have
+      no PV inputs and are not entered here.</div>
+
+    <div class="button-group">
+      <button type="button" class="analyze-btn" id="siteAnalyzeBtn">Analyze site</button>
+      <button type="button" class="reset-btn" id="siteClearBtn">Clear</button>
+    </div>
+  </div>
+
+  <div class="card" id="variantCard">
     <label class="card-heading" for="variant">Unit rating</label>
     <select id="variant">
       <option value="13" selected>13 A Imp unit (most units)</option>
@@ -167,7 +272,40 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
     <div class="variant-hint">Tesla ships two PW3 variants with different PV input current ratings. Check the label in the enclosure. Getting this wrong changes every current verdict below.</div>
   </div>
 
-  <div class="card">
+  <details class="card" id="modCard">
+    <summary>Module data <span class="opt">optional &mdash; enables string counting</span></summary>
+    <div class="details-body">
+      <div class="mod-field" style="margin-bottom:14px">
+        <label for="modPreset">Module</label>
+        <select id="modPreset"></select>
+      </div>
+      <div id="modLimits" class="mod-live"></div>
+      <div class="mod-grid">
+        <div class="mod-field"><label for="modVoc">Voc STC <span class="unit">V</span></label>
+          <input type="number" id="modVoc" inputmode="decimal" step="0.1" min="0" placeholder="45"></div>
+        <div class="mod-field"><label for="modVmp">Vmp STC <span class="unit">V</span></label>
+          <input type="number" id="modVmp" inputmode="decimal" step="0.1" min="0" placeholder="auto"></div>
+        <div class="mod-field"><label for="modBVoc">Voc coeff <span class="unit">%/&deg;C</span></label>
+          <input type="number" id="modBVoc" inputmode="decimal" step="0.01" placeholder="-0.27"></div>
+        <div class="mod-field"><label for="modBVmp">Vmp coeff <span class="unit">%/&deg;C</span></label>
+          <input type="number" id="modBVmp" inputmode="decimal" step="0.01" placeholder="-0.37"></div>
+        <div class="mod-field"><label for="modTLo">Cell temp low <span class="unit">&deg;C</span></label>
+          <input type="number" id="modTLo" inputmode="decimal" step="1" placeholder="25"></div>
+        <div class="mod-field"><label for="modTHi">Cell temp high <span class="unit">&deg;C</span></label>
+          <input type="number" id="modTHi" inputmode="decimal" step="1" placeholder="55"></div>
+        <div class="mod-field"><label for="modTRec">Site record low <span class="unit">&deg;C</span></label>
+          <input type="number" id="modTRec" inputmode="decimal" step="1" placeholder="-10"></div>
+        <div class="mod-field"><label for="modPlan">Planset mod/string</label>
+          <input type="number" id="modPlan" inputmode="numeric" step="1" min="0" placeholder="none"></div>
+      </div>
+      <div class="mod-note">Enter <b>Voc</b> to switch string counting on; leave the card empty and the
+        tool behaves exactly as before. The rest falls back to the typical mono values shown as
+        placeholders. Counts come out as a <b>range</b> &mdash; cell temperature is not measured and it
+        moves the answer by whole modules.</div>
+    </div>
+  </details>
+
+  <div class="card" id="pasteCard">
     <div class="card-head-row">
       <label class="card-heading" for="pasteBox">Paste from Tesla One</label>
       <span class="head-tag">Fastest input</span>
@@ -181,7 +319,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
     <div id="pasteStatus"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="inputsCard">
     <div class="card-heading">String readings</div>
     <form id="form" novalidate>
 
@@ -190,6 +328,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
           <div class="set-label">Set A &middot; MPPT 1 &amp; 2</div>
           <span class="set-tag tag-jumper">Jumper-capable 1&#8596;2</span>
         </div>
+        <div class="set-sub">A jumper wire can tie these two inputs into one circuit. The tool infers whether one is likely needed &mdash; it never assumes one is installed.</div>
         <div class="mppt-pair">
           <div class="mppt-box"><div class="mppt-title">MPPT 1</div>
             <div class="input-group"><label for="m1v">V</label><input type="number" id="m1v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
@@ -229,6 +368,7 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
           <div class="set-label">Set C &middot; MPPT 5 &amp; 6</div>
           <span class="set-tag tag-jumper">Jumper-capable 5&#8596;6</span>
         </div>
+        <div class="set-sub">A jumper wire can tie these two inputs into one circuit. The tool infers whether one is likely needed &mdash; it never assumes one is installed.</div>
         <div class="mppt-pair">
           <div class="mppt-box"><div class="mppt-title">MPPT 5</div>
             <div class="input-group"><label for="m5v">V</label><input type="number" id="m5v" inputmode="decimal" min="0" step="0.1" placeholder="380"></div>
@@ -251,6 +391,9 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
   <div class="output-section" id="output">
     <div id="status"></div>
     <div id="config"></div>
+    <div id="siteOut"></div>
+    <div id="strings"></div>
+    <div id="acOut"></div>
     <div id="findings"></div>
   </div>
 
@@ -258,7 +401,8 @@ button:focus-visible{outline:2px solid var(--sun);outline-offset:-1px}
 
   <div class="footer">
     Readings come from Tesla One &rarr; Solar DC Inputs.<br>
-    Advisory tool only &mdash; verify jumper state visually before changing wiring.<br>
+    <span class="advisory">Advisory tool only &mdash; verify jumper state visually before changing wiring.</span><br>
+    Unofficial and not affiliated with or endorsed by Tesla.<br>
     <span class="credit">Built by gonzobonzob-bit</span>
   </div>
 
@@ -363,6 +507,215 @@ function readAll() {
   return { sets: sets, anyEntered: anyEntered, badFields: badFields };
 }
 
+function numOr(id, dflt) {
+  var f = readField(id);
+  return (f.blank || f.bad || !isFinite(f.val)) ? dflt : f.val;
+}
+
+function readModule() {
+  var voc = readField("modVoc");
+  if (voc.blank || voc.bad || !(voc.val > 0)) return null;   // card empty = feature off
+  var vmp = numOr("modVmp", 0);
+  if (!(vmp > 0)) vmp = voc.val * MOD.VMP_RATIO;
+  // Vendors publish the same module as "-0.27" or "0.27" %/degC. Voltage
+  // coefficients are always negative, so normalize rather than trust the sign.
+  var tLo = numOr("modTLo", MOD.T_LO);
+  var tHi = numOr("modTHi", MOD.T_HI);
+  if (tHi < tLo) { var t = tLo; tLo = tHi; tHi = t; }
+  var plan = Math.round(numOr("modPlan", 0));
+  // Carry the preset's power class through so array kW (and therefore DC/AC
+   // ratio) can be computed. Unlisted modules leave it 0 and those checks skip.
+  var wSel = 0, selEl = document.getElementById("modPreset"), mi;
+  if (selEl) for (mi = 0; mi < MODULES.length; mi++)
+    if (MODULES[mi].id === selEl.value) wSel = MODULES[mi].w;
+  return {
+    voc: voc.val, vmp: vmp, w: wSel,
+    betaVoc: -Math.abs(numOr("modBVoc", MOD.BETA_VOC)),
+    betaVmp: -Math.abs(numOr("modBVmp", MOD.BETA_VMP)),
+    tLo: tLo, tHi: tHi,
+    tRecord: numOr("modTRec", MOD.T_RECORD),
+    plan: plan > 0 ? plan : 0
+  };
+}
+
+/* Populate the preset dropdown and keep the live ceiling readout in step with
+   whatever is currently in the fields. Pure DOM - no effect on analysis. */
+function fillPresets() {
+  var sel = document.getElementById("modPreset");
+  if (!sel) return;
+  var h = '<option value="">None - string counting off</option>', i;
+  for (i = 0; i < MODULES.length; i++)
+    h += '<option value="' + MODULES[i].id + '">' + esc(MODULES[i].label) + "</option>";
+  h += '<option value="custom">Custom / other module</option>';
+  sel.innerHTML = h;
+}
+
+function applyPreset() {
+  var sel = document.getElementById("modPreset"), i, p = null;
+  if (!sel) return;
+  if (sel.value === "") {
+    ["modVoc","modVmp","modBVoc","modBVmp"].forEach(function (id) {
+      document.getElementById(id).value = "";
+    });
+  } else if (sel.value !== "custom") {
+    for (i = 0; i < MODULES.length; i++) if (MODULES[i].id === sel.value) p = MODULES[i];
+    if (p) {
+      document.getElementById("modVoc").value  = p.voc;
+      document.getElementById("modVmp").value  = p.vmp;
+      document.getElementById("modBVoc").value = p.bvoc;
+      document.getElementById("modBVmp").value = p.bvmp;
+    }
+  }
+  updateModLimits();
+}
+
+/* Live ceiling readout: recomputes as any module or temperature field changes,
+   so the max-modules figure tracks the module actually selected. */
+function updateModLimits() {
+  var el = document.getElementById("modLimits");
+  if (!el) return;
+  var mod = readModule();
+  if (!mod) { el.className = "mod-live empty"; el.innerHTML = ""; return; }
+  var lim = stringLimits(mod);
+  if (!lim) { el.className = "mod-live empty"; el.innerHTML = ""; return; }
+  el.className = "mod-live";
+  el.innerHTML =
+    "Max <b class=\"cap\">" + lim.maxAbs + "</b> modules per string &mdash; " +
+    lim.maxAbs + " &times; " + fmt(lim.vocCold) + " V = <b>" + fmt(lim.maxAbs * lim.vocCold) +
+    " V</b> open-circuit at " + fmt(mod.tRecord) + " &deg;C, under the " + V_SPEC.ABS_MAX + " V input max." +
+    "<br><b>" + lim.maxTrack + "</b> to stay below the " + V_SPEC.MPPT_MAX +
+    " V MPPT tracking top; minimum <b>" + lim.minTrack + "</b> to hold " + V_SPEC.MPPT_MIN +
+    " V at " + fmt(mod.tHi) + " &deg;C.";
+}
+
+/* ---------- Site mode: DOM plumbing ---------- */
+var siteMode = false, unitSeq = 0;
+
+function addUnitBlock(defaultLabel) {
+  var list = document.getElementById("unitList");
+  if (!list) return;
+  if (list.children.length >= SITE.MAX_UNITS) return;
+  unitSeq++;
+  var n = list.children.length + 1;
+  var d = document.createElement("div");
+  d.className = "unit-block";
+  d.setAttribute("data-seq", unitSeq);
+  d.innerHTML =
+    '<div class="unit-head">' +
+      '<input type="text" class="u-label" value="' + esc(defaultLabel || ("Powerwall " + n)) +
+        '" aria-label="Unit name">' +
+      '<button type="button" class="rm" aria-label="Remove unit">&times;</button>' +
+    "</div>" +
+    '<textarea class="u-paste" rows="4" placeholder="Paste this unit\u2019s vitals \u2014 AC Vitals through Battery"></textarea>' +
+    '<select class="u-variant">' +
+      '<option value="13">13 A Imp unit (most units)</option>' +
+      '<option value="15">15 A Imp unit (P/N 1707000-11-L / -21-L and higher)</option>' +
+    "</select>";
+  list.appendChild(d);
+  d.querySelector(".rm").addEventListener("click", function () {
+    list.removeChild(d);
+    syncAddBtn();
+  });
+  syncAddBtn();
+}
+
+function syncAddBtn() {
+  var list = document.getElementById("unitList"), b = document.getElementById("addUnit");
+  if (!list || !b) return;
+  var n = list.children.length;
+  b.disabled = n >= SITE.MAX_UNITS;
+  b.textContent = b.disabled
+    ? "Maximum " + SITE.MAX_UNITS + " base units per gateway"
+    : "+ Add Powerwall";
+}
+
+function readSiteUnits() {
+  var list = document.getElementById("unitList"), out = [], i, blk, txt, lbl, v;
+  if (!list) return out;
+  for (i = 0; i < list.children.length; i++) {
+    blk = list.children[i];
+    txt = blk.querySelector(".u-paste").value;
+    lbl = blk.querySelector(".u-label").value.trim() || ("Powerwall " + (i + 1));
+    v = blk.querySelector(".u-variant").value;
+    if (!/\S/.test(txt)) continue;
+    out.push({ label: lbl, raw: txt, spec: VARIANTS[v] || VARIANTS["13"],
+               variantKey: v, parsed: parseUnit(txt) });
+  }
+  return out;
+}
+
+function setMode(site) {
+  siteMode = !!site;
+  document.getElementById("tabUnit").setAttribute("aria-selected", site ? "false" : "true");
+  document.getElementById("tabSite").setAttribute("aria-selected", site ? "true" : "false");
+  var panel = document.getElementById("sitePanel");
+  if (panel) panel.hidden = !site;
+  // Hide the single-unit input paths while in site mode; keep module data visible
+  // because string counting applies to every unit.
+  var ids = ["pasteCard", "inputsCard", "variantCard"], i, el;
+  for (i = 0; i < ids.length; i++) {
+    el = document.getElementById(ids[i]);
+    if (el) el.hidden = site;
+  }
+  clearOutputs();
+  // Default to Gateway + 2 Powerwalls (3 paste-able sections) on first entry to
+  // site mode - the realistic minimum for a multi-unit health check, not 1.
+  if (site && document.getElementById("unitList").children.length === 0) {
+    addUnitBlock();
+    addUnitBlock();
+  }
+}
+
+function clearOutputs() {
+  ["status", "config", "siteOut", "strings", "acOut", "findings"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+}
+
+function renderSite(site) {
+  var el = document.getElementById("siteOut");
+  if (!el) return;
+  if (!site || !site.units.length) { el.innerHTML = ""; return; }
+  var h = '<div class="findings-section"><div class="findings-title">Devices</div>', i, u;
+
+  if (site.gw) {
+    var g = site.gw, gm = [];
+    if (g.contactor) gm.push("contactor " + esc(g.contactor));
+    if (g.gridState) gm.push(esc(g.gridState));
+    if (g.lines[0] && g.lines[0].v !== null) gm.push("L1 " + fmt(g.lines[0].v) + " V");
+    if (g.lines[1] && g.lines[1].v !== null) gm.push("L2 " + fmt(g.lines[1].v) + " V");
+    if (g.lines[0] && g.lines[0].hz) gm.push(fmt(g.lines[0].hz) + " Hz");
+    var gcls = (g.contactor && !/closed/i.test(g.contactor)) ? "yellow" : "grey";
+    h += '<div class="site-card ' + gcls + '"><div class="sc-top">' +
+         '<span class="sc-name">Gateway</span></div>' +
+         '<div class="sc-meta">' + gm.join(" &middot; ") + "</div></div>";
+  }
+
+  var totW = 0, totM = 0;
+  for (i = 0; i < site.units.length; i++) {
+    u = site.units[i];
+    totW += u.dcW; totM += u.modules;
+    var meta = [];
+    meta.push(u.parsed.mppt.count + "/6 MPPT");
+    if (u.dcW > 0) meta.push(fmt(u.dcW) + " W DC");
+    if (u.modules > 0) meta.push(u.modules + " modules");
+    if (u.parsed.inverterMode) meta.push(esc(u.parsed.inverterMode));
+    if (u.parsed.version) meta.push("fw " + esc(u.parsed.version.split(" ")[0]));
+    h += '<div class="site-card ' + u.status.cls + '"><div class="sc-top">' +
+         '<span class="sc-name">' + esc(u.label) + "</span>" +
+         '<span class="sc-verdict">' + esc(u.status.label) + "</span></div>" +
+         '<div class="sc-meta">' + meta.join(" &middot; ") + "</div></div>";
+  }
+
+  if (site.units.length > 1) {
+    var sum = site.units.length + " units &middot; " + fmt(totW) + " W DC total";
+    if (totM > 0) sum += " &middot; " + totM + " modules";
+    h += '<div class="sc-meta" style="padding:4px 2px 0">' + sum + "</div>";
+  }
+  el.innerHTML = h + "</div>";
+}
+
 function hardErrors(data, spec) {
   var errs = [];
 
@@ -423,11 +776,307 @@ function normalizePaste(raw) {
 function foldZero(n) { return n === 0 ? 0 : n; }
 
 function grabLabelled(text, label) {
-  var re = new RegExp(label.replace(/ /g, "\\s+") + "\\s*:?\\s*([^\\n]*)", "i");
+  // Escape regex metacharacters FIRST - real Tesla One labels contain parentheses
+  // ("AC Voltage (L-L)", "DCDC State (A/B)") which would otherwise be parsed as
+  // capture groups and never match. Spaces become \s+ after escaping.
+  var lit = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+");
+  var re = new RegExp(lit + "\\s*:?\\s*([^\\n]*)", "i");
   var m = text.match(re);
   if (!m) return null;
   var v = m[1].replace(/\s+/g, " ").trim();
   return v === "" ? null : v;
+}
+
+/* ---------- AC side ----------
+   SOURCED (Tesla PW3 datasheet, energylibrary.tesla.com):
+     Nominal grid voltage 120/240 VAC, split phase, 60 Hz.
+     Nominal AC output is site-configurable per grid code to one of four ratings;
+     "Max Current Output" in Tesla One is that configured limit.
+     Up to 20 kW DC of PV per unit against 11.5 kW AC maximum.
+   SOURCED (ANSI C84.1): Range A service voltage is nominal +/-5%.
+   SOURCED (IEEE 1547, which PW3 is certified to): continuous operating range is
+     0.88-1.10 pu voltage and 59.3-60.5 Hz. Outside that band the inverter is
+     expected to cease export - so a reading outside it explains a non-producing
+     unit without anything being wrong with the PV.
+   JUDGEMENT (not spec): the leg-imbalance and L-L consistency tolerances below.
+     They are set wide enough to survive meter rounding and real load imbalance. */
+var AC_SPEC = {
+  V_LN: 120, V_LL: 240, F_NOM: 60,
+  RANGE_A: 0.05,        // ANSI C84.1 Range A, +/-5%
+  PU_LO: 0.88,          // IEEE 1547 continuous operating range
+  PU_HI: 1.10,
+  F_LO: 59.3, F_HI: 60.5,
+  IMBAL_PCT: 0.03,      // judgement: leg-to-leg spread worth a look
+  LL_TOL: 0.025,        // judgement: |L-L - (L1+L2)| tolerance, split phase
+  DCAC_CLIP: 1.5,       // judgement: DC/AC above this means routine clipping
+  DC_MAX_KW: 20         // sourced: max PV DC per unit
+};
+
+/* Configured AC output ratings. Maximum Continuous Current maps 1:1 to the
+   nominal output power and the required OCPD. */
+var AC_RATINGS = [
+  { a: 24,   kw: 5.8,  ocpd: 30 },
+  { a: 31.7, kw: 7.6,  ocpd: 40 },
+  { a: 41.7, kw: 10,   ocpd: 60 },
+  { a: 48,   kw: 11.5, ocpd: 60 }
+];
+
+function ratingFromCurrent(a) {
+  if (a === null || !isFinite(a) || a <= 0) return null;
+  var best = null, i, d, bd = Infinity;
+  for (i = 0; i < AC_RATINGS.length; i++) {
+    d = Math.abs(AC_RATINGS[i].a - a);
+    if (d < bd) { bd = d; best = AC_RATINGS[i]; }
+  }
+  return bd <= 1.5 ? best : null;   // within rounding of a published rating
+}
+
+/* Classify one voltage reading against nominal. Returns "ok" | "range" | "trip". */
+function vClass(v, nom) {
+  if (v === null || !isFinite(v) || v <= 0) return null;
+  var pu = v / nom;
+  // EPS because 126/120 - 1 evaluates to 0.050000000000000044, so a reading
+  // sitting exactly on the +/-5% Range A limit would otherwise be flagged.
+  // Limits are inclusive: 126 V on a 120 V nominal is IN range.
+  var EPS = 1e-9;
+  if (pu < AC_SPEC.PU_LO - EPS || pu > AC_SPEC.PU_HI + EPS) return "trip";
+  if (Math.abs(pu - 1) > AC_SPEC.RANGE_A + EPS) return "range";
+  return "ok";
+}
+
+/* AC analysis for one device. ctx.dcW / ctx.arrayKw are optional: with them the
+   clipping and DC/AC checks run, without them they are skipped, not guessed. */
+/* A reading is usable only if it is a finite positive number. NaN and Infinity
+   survive a bare `> 0` test in the Infinity case and would print verbatim into a
+   finding ("frequency is Infinity Hz"), so every consumer goes through this. */
+function acNum(x) {
+  return (x === null || x === undefined || typeof x !== "number" ||
+          !isFinite(x) || x <= 0) ? null : x;
+}
+
+function analyzeAC(ac, ctx) {
+  var out = { findings: [], sev: SEV.NONE, rating: null };
+  if (!ac) return out;
+  var add = mkAdd(out);
+  ctx = ctx || {};
+  var who = ctx.label ? ctx.label + ": " : "";
+  var i, c;
+
+  // Normalise every reading up front; unusable values become null and their
+  // checks are skipped rather than producing nonsense text.
+  var l1 = acNum(ac.line1), l2 = acNum(ac.line2), l3 = acNum(ac.line3);
+  var vll = acNum(ac.vll), freq = acNum(ac.freq), maxA = acNum(ac.maxCurrent);
+  var dcW = acNum(ctx.dcW) || 0, arrayKw = acNum(ctx.arrayKw) || 0;
+
+  var legs = [];
+  if (l1 !== null) legs.push({ n: "Line 1", v: l1 });
+  if (l2 !== null) legs.push({ n: "Line 2", v: l2 });
+  if (l3 !== null && l3 > 30) legs.push({ n: "Line 3", v: l3 });
+
+  for (i = 0; i < legs.length; i++) {
+    c = vClass(legs[i].v, AC_SPEC.V_LN);
+    if (c === "trip") {
+      add("error", who + legs[i].n + " is " + fmt(legs[i].v) + " V against a 120 V nominal (" +
+        fmt(legs[i].v / AC_SPEC.V_LN * 100) + "% of nominal). That is outside the IEEE 1547 " +
+        "continuous operating range of " + fmt(AC_SPEC.PU_LO * 100) + "-" + fmt(AC_SPEC.PU_HI * 100) +
+        "%, so the inverter is expected to stop exporting. If the unit is not producing, " +
+        "this is why - a grid or service problem, not a PV fault.");
+    } else if (c === "range") {
+      add("warning", who + legs[i].n + " is " + fmt(legs[i].v) + " V, outside the ANSI C84.1 " +
+        "Range A window of " + fmt(AC_SPEC.V_LN * (1 - AC_SPEC.RANGE_A)) + "-" +
+        fmt(AC_SPEC.V_LN * (1 + AC_SPEC.RANGE_A)) + " V. The inverter will still run, but " +
+        "report it to the utility if it persists - sustained high voltage causes nuisance trips.");
+    }
+  }
+
+  if (vll !== null) {
+    c = vClass(vll, AC_SPEC.V_LL);
+    if (c === "trip") {
+      add("error", who + "AC Voltage (L-L) is " + fmt(vll) + " V against a 240 V nominal. " +
+        "Outside the IEEE 1547 continuous operating range - expect the unit to cease export.");
+    } else if (c === "range") {
+      add("warning", who + "AC Voltage (L-L) is " + fmt(vll) +
+        " V, outside the ANSI C84.1 Range A window of " +
+        fmt(AC_SPEC.V_LL * (1 - AC_SPEC.RANGE_A)) + "-" +
+        fmt(AC_SPEC.V_LL * (1 + AC_SPEC.RANGE_A)) + " V.");
+    }
+  }
+
+  if (l1 !== null && l2 !== null) {
+    var d = Math.abs(l1 - l2);
+    if (d > AC_SPEC.V_LN * AC_SPEC.IMBAL_PCT) {
+      add("warning", who + "the two legs differ by " + fmt(d) + " V (Line 1 " + fmt(l1) +
+        " V, Line 2 " + fmt(l2) + " V). On a split-phase service the legs should track " +
+        "closely. Check the neutral connection and for heavily unbalanced loads.");
+    }
+  }
+
+  if (vll !== null && l1 !== null && l2 !== null) {
+    var sum = l1 + l2;
+    var gap = Math.abs(vll - sum);
+    if (gap > AC_SPEC.V_LL * AC_SPEC.LL_TOL) {
+      var avgLn = (l1 + l2) / 2;
+      var three = Math.abs(vll - Math.sqrt(3) * avgLn);
+      if (three < gap && three < AC_SPEC.V_LL * AC_SPEC.LL_TOL) {
+        add("warning", who + "L-L reads " + fmt(vll) + " V against legs of " + fmt(l1) +
+          " and " + fmt(l2) + " V. That is the square-root-of-3 relationship of a " +
+          "three-phase service, not the sum expected on split phase. Powerwall 3 is a " +
+          "split-phase device - confirm how it is connected.");
+      } else {
+        add("warning", who + "L-L reads " + fmt(vll) + " V but the legs sum to " + fmt(sum) +
+          " V (" + fmt(gap) + " V apart). On split phase these should match. Suspect a sense " +
+          "conductor or a mis-transcribed reading.");
+      }
+    }
+  }
+
+  if (freq !== null) {
+    if (freq < AC_SPEC.F_LO || freq > AC_SPEC.F_HI) {
+      add("error", who + "frequency is " + fmt(freq) + " Hz, outside the IEEE 1547 " +
+        "continuous operating range of " + AC_SPEC.F_LO + "-" + AC_SPEC.F_HI +
+        " Hz. The unit is expected to cease export. If the site is islanded this may be " +
+        "normal for grid forming; on grid it is a utility problem.");
+    }
+  }
+
+  var rt = ratingFromCurrent(maxA);
+  out.rating = rt;
+  if (maxA !== null && !rt) {
+    add("info", who + "Max Current Output reads " + fmt(maxA) + " A, which does not " +
+      "match any published Powerwall 3 rating (24, 31.7, 41.7 or 48 A). Check the value.");
+  }
+
+  if (dcW > 0 && ac.inverterState && !/^active$/i.test(ac.inverterState)) {
+    add("error", who + "the array is delivering " + fmt(dcW) + " W DC but Inverter State " +
+      "is \"" + ac.inverterState + "\". DC is present and not being converted - that is a " +
+      "unit fault, not nightfall.");
+  }
+
+  if (rt && dcW > 0 && dcW / 1000 > rt.kw) {
+    add("info", who + "DC input is " + fmt(dcW / 1000) + " kW against a configured " +
+      rt.kw + " kW AC output limit, so the inverter is clipping right now. Flat-topped " +
+      "production at this level is expected behaviour, not a fault.");
+  }
+  if (rt && arrayKw > 0) {
+    var ratio = arrayKw / rt.kw;
+    if (arrayKw > AC_SPEC.DC_MAX_KW) {
+      add("error", who + "the array is " + fmt(arrayKw) + " kW DC, above the " +
+        AC_SPEC.DC_MAX_KW + " kW maximum PV input per Powerwall 3.");
+    } else if (ratio > AC_SPEC.DCAC_CLIP) {
+      add("warning", who + "DC/AC ratio is " + fmt(ratio) + " to 1 (" + fmt(arrayKw) +
+        " kW array on a " + rt.kw + " kW AC limit). Expect routine clipping through the " +
+        "middle of the day. Confirm this matches the design.");
+    }
+  }
+
+  return out;
+}
+
+/* ---------- Site-level parsing (gateway + multiple Powerwalls) ----------
+   Tesla One shows one device at a time, so a site review is several pastes. Each
+   is parsed independently, then compared. Section scoping matters: "Line 1"
+   appears in BOTH the gateway Grid block and a Powerwall's AC Vitals block, with
+   different formats ("119.5V / 59.98Hz" vs "119.8V"), and grabLabelled() takes
+   the first match in the text it is given. */
+
+// "Expansions" confirmed from a real capture: Grid -> Expansions -> AC Vitals -> ...
+// Without it here, sliceSection("Grid") doesn't stop at the Expansions header and
+// sweeps expansion lines into the Grid slice. Expansion units are battery-only
+// (no inverter, no PV inputs - they use the base Powerwall's inverter) so they
+// never carry AC Vitals/Solar DC Inputs/Battery blocks of their own; they just
+// need to be a recognized boundary so they don't get absorbed by Grid.
+var SEC_NAMES = ["Grid", "Expansions", "AC Vitals", "Solar DC Inputs", "Battery", "Metering", "Alerts"];
+
+function sliceSection(text, name) {
+  var lines = text.split("\n"), start = -1, end = -1, i, k, t;
+  for (i = 0; i < lines.length; i++) {
+    t = lines[i].trim();
+    if (start < 0) {
+      if (t.toLowerCase() === name.toLowerCase()) start = i + 1;
+    } else {
+      for (k = 0; k < SEC_NAMES.length; k++) {
+        if (t.toLowerCase() === SEC_NAMES[k].toLowerCase()) { end = i; break; }
+      }
+      if (end >= 0) break;
+    }
+  }
+  if (start < 0) return null;
+  return lines.slice(start, end < 0 ? lines.length : end).join("\n");
+}
+
+// Pull the first number preceding a unit token out of a labelled value.
+function numUnit(s, unit) {
+  if (!s) return null;
+  var m = s.match(new RegExp("(-?[0-9]+(?:\\.[0-9]+)?)\\s*" + unit, "i"));
+  return m ? foldZero(Number(m[1])) : null;
+}
+
+function parseGateway(raw) {
+  var text = normalizePaste(raw);
+  if (!/\S/.test(text)) return null;
+  var grid = sliceSection(text, "Grid");
+  var scope = grid === null ? text : grid;
+  var lines = [], i, s;
+  for (i = 1; i <= 3; i++) {
+    s = grabLabelled(scope, "Line " + i);
+    lines.push(s === null ? null : { v: numUnit(s, "V"), hz: numUnit(s, "Hz") });
+  }
+  return {
+    scoped: grid !== null,
+    contactor: grabLabelled(scope, "Contactor State"),
+    gridState: grabLabelled(scope, "Grid State"),
+    lines: lines
+  };
+}
+
+function parseUnit(raw) {
+  var text = normalizePaste(raw);
+  if (!/\S/.test(text)) return null;
+  var ac = sliceSection(text, "AC Vitals"), bat = sliceSection(text, "Battery");
+  var acS = ac === null ? text : ac, batS = bat === null ? text : bat;
+  return {
+    acScoped: ac !== null,
+    mppt: parseVitals(raw),
+    inverterState: grabLabelled(acS, "Inverter State"),
+    inverterMode: grabLabelled(acS, "Inverter Mode"),
+    maxCurrent: numUnit(grabLabelled(acS, "Max Current Output"), "A"),
+    freq: numUnit(grabLabelled(acS, "Frequency"), "Hz"),
+    vll: numUnit(grabLabelled(acS, "AC Voltage (L-L)"), "V"),
+    line1: numUnit(grabLabelled(acS, "Line 1"), "V"),
+    line2: numUnit(grabLabelled(acS, "Line 2"), "V"),
+    batteryState: grabLabelled(batS, "Battery State"),
+    dcdc: grabLabelled(batS, "DCDC State (A/B)"),
+    pwSwitch: grabLabelled(batS, "Powerwall Switch"),
+    version: grabLabelled(batS, "Version")
+  };
+}
+
+/* Build the analysis data shape from parsed MPPT values, with no DOM access, so
+   a pasted unit runs through exactly the same per-set logic as manual entry. */
+function dataFromValues(values) {
+  var sets = [], s, i, def, id, val, mppts, a, v;
+  for (s = 0; s < SETS.length; s++) {
+    def = SETS[s]; mppts = [];
+    for (i = 0; i < 2; i++) {
+      id = def.ids[i]; val = values[id];
+      v = val ? val.v : 0;
+      a = val ? val.a : 0;
+      if (a < 0 && v <= ON_V) a = 0;   // mirrors readAll()
+      mppts.push({ id: id, v: v, a: a, entered: !!val, on: a > ON_A });
+    }
+    sets.push({ key: def.key, jumperable: def.jumperable, m: mppts,
+                entered: mppts[0].entered || mppts[1].entered });
+  }
+  return { sets: sets };
+}
+
+function unitDcWatts(values) {
+  var w = 0, id, val;
+  for (id = 1; id <= 6; id++) {
+    val = values[id];
+    if (val && val.v > ON_V && val.a > ON_A) w += val.v * val.a;
+  }
+  return w;
 }
 
 function parseVitals(raw) {
@@ -463,7 +1112,23 @@ function parseVitals(raw) {
     missing: missing,
     count: matched.length,
     inverterState: grabLabelled(text, "Inverter State"),
-    inverterMode: grabLabelled(text, "Inverter Mode")
+    inverterMode: grabLabelled(text, "Inverter Mode"),
+    // AC context from the same paste. Scoped to AC Vitals when that section is
+    // present so a combined gateway+unit paste cannot cross-contaminate.
+    ac: (function () {
+      var acSec = sliceSection(text, "AC Vitals");
+      var s = acSec === null ? text : acSec;
+      return {
+        inverterState: grabLabelled(s, "Inverter State"),
+        inverterMode: grabLabelled(s, "Inverter Mode"),
+        maxCurrent: numUnit(grabLabelled(s, "Max Current Output"), "A"),
+        freq: numUnit(grabLabelled(s, "Frequency"), "Hz"),
+        vll: numUnit(grabLabelled(s, "AC Voltage (L-L)"), "V"),
+        line1: numUnit(grabLabelled(s, "Line 1"), "V"),
+        line2: numUnit(grabLabelled(s, "Line 2"), "V"),
+        line3: null
+      };
+    })()
   };
 }
 
@@ -478,6 +1143,461 @@ function pasteMessage(res) {
   return { cls: "warn", text: "Matched " + res.count + " of 6. NOT found: MPPT " +
     res.missing.join(", ") + " - those fields were left as they were. Enter them by hand, " +
     "or re-copy the full Solar DC Inputs section." };
+}
+
+/* ---------- Module data + string counting (optional) ----------
+   Runs only when a module Voc is entered. With the card left empty, readModule()
+   returns null, nothing here executes, and every existing verdict is unchanged.
+
+   Why this is NOT "measured volts / nameplate volts":
+   a string under load reports Vmp, not Voc, and both fall as the cells heat. A
+   12-module string of 45 V(oc) modules reads ~490 V at 0 degC cell and ~382 V at
+   65 degC. Dividing either by 45 gives 11 and 8 - an undercount of up to a third.
+   The divisor has to be the right parameter (Voc when open-circuit, Vmp when
+   loaded) evaluated at the actual cell temperature. Cell temperature is not
+   measured, so the honest output is an integer RANGE, never a single count. */
+
+/* Module presets. Datasheet figures; every one stays editable after selection
+   because power class and revision vary between installs.
+   beta_Vmp is NOT published by Q CELLS - it is derived as gamma_Pmpp - alpha_Isc,
+   since Pmpp = Vmp x Imp. For the G10 series: -0.34 - 0.04 = -0.38 %/degC. */
+var MODULES = [
+  { id: "qc410", label: "Q.PEAK DUO BLK ML-G10.C+ 410",
+    voc: 45.27, vmp: 37.64, isc: 11.08, imp: 10.89, bvoc: -0.27, bvmp: -0.38, w: 410 },
+  { id: "qc405", label: "Q.PEAK DUO BLK ML-G10 405",
+    voc: 45.23, vmp: 37.13, isc: 11.05, imp: 10.77, bvoc: -0.27, bvmp: -0.38, w: 405 },
+  { id: "qc400", label: "Q.PEAK DUO BLK ML-G10 400",
+    voc: 45.19, vmp: 36.88, isc: 11.02, imp: 10.71, bvoc: -0.27, bvmp: -0.38, w: 400 },
+  { id: "qc415", label: "Q.PEAK DUO ML-G10+ 415",
+    voc: 45.16, vmp: 38.37, isc: 11.26, imp: 10.82, bvoc: -0.27, bvmp: -0.38, w: 415 }
+];
+
+var MOD = {
+  VMP_RATIO: 0.83,   // Vmp/Voc fallback when only Voc is known (modern mono)
+  BETA_VOC:  -0.27,  // %/degC, typical mono PERC
+  BETA_VMP:  -0.37,  // %/degC, Vmp falls faster than Voc
+  T_LO:       25,    // default cell-temperature bracket
+  T_HI:       55,
+  T_RECORD:  -10,    // default site record low, for the design check
+  V_TOL:      0.02   // allowance for reading and rounding error
+};
+
+// betaPct is %/degC (negative). Linear tempco, the datasheet convention.
+function vAtTemp(vStc, betaPct, tCell) {
+  return vStc * (1 + (betaPct / 100) * (tCell - 25));
+}
+
+/* Estimate modules in series from one reading.
+   loaded=true  -> the MPPT is drawing, so the reading is Vmp
+   loaded=false -> voltage present at ~no current, so the reading is Voc
+   Cold cells give a HIGHER per-module voltage, hence FEWER modules for the same
+   measured string voltage; hot cells give more. That is the whole range. */
+function estimateModules(vMeas, loaded, mod) {
+  if (!mod || !(vMeas > 0)) return null;
+  var vStc = loaded ? mod.vmp : mod.voc;
+  // Voltage temperature coefficients are physically negative. Vendors publish the
+  // same module as "-0.27" or "0.27 %/degC", so normalize HERE rather than trust
+  // the caller - readModule() also normalizes, but this function is exported and
+  // must not depend on which path supplied the data.
+  var beta = -Math.abs(loaded ? mod.betaVmp : mod.betaVoc);
+  var tLo = Math.min(mod.tLo, mod.tHi), tHi = Math.max(mod.tLo, mod.tHi);
+  var perCold = vAtTemp(vStc, beta, tLo);
+  var perHot  = vAtTemp(vStc, beta, tHi);
+  if (!(perCold > 0) || !(perHot > 0)) return null;
+  var nLo = vMeas / perCold;
+  var nHi = vMeas / perHot;
+  var lo = Math.ceil(nLo * (1 - MOD.V_TOL) - 1e-9);
+  var hi = Math.floor(nHi * (1 + MOD.V_TOL) + 1e-9);
+  if (lo < 1) lo = 1;
+  var best = Math.round((nLo + nHi) / 2);
+  if (best < 1) best = 1;
+  return { lo: lo, hi: hi, best: best, fits: hi >= lo, loaded: loaded,
+           perCold: perCold, perHot: perHot, nLo: nLo, nHi: nHi };
+}
+
+/* Solve for the cell temperature that makes EVERY live string land on a whole
+   module count. Strings on one roof share a temperature, so a single unknown has
+   to satisfy all of them at once - which usually pins the counts exactly instead
+   of leaving a range. Verified against a real capture: MPPT 1 at 350 V and MPPT 3
+   at 245 V both resolve at 43.5 degC cell, giving 10 and 7 modules.
+
+   Returns null when no temperature in the plausible band fits every string, which
+   is itself informative - mixed module types, or the wrong module selected. */
+function solveCellTemp(readings, mod, tMin, tMax) {
+  if (!readings.length) return null;
+  // Guard the sweep bounds before looping. A non-finite tMin/tMax would make
+  // `t += STEP` never advance (Infinity + 0.1 === Infinity) and hang the tab -
+  // found by the module fuzz, which feeds Infinity through this path.
+  if (!isFinite(tMin) || !isFinite(tMax)) return null;
+  if (!isFinite(mod.vmp) || !isFinite(mod.betaVmp) || !(mod.vmp > 0)) return null;
+  if (tMax < tMin) { var sw = tMin; tMin = tMax; tMax = sw; }
+  // Clamp to a physically meaningful band, then cap the iteration count outright
+  // so no input can produce an unbounded sweep.
+  if (tMin < -60) tMin = -60;
+  if (tMax > 120) tMax = 120;
+  var STEP = 0.1, MAX_STEPS = 2000;
+  var steps = Math.floor((tMax - tMin) / STEP);
+  if (steps < 0) return null;
+  if (steps > MAX_STEPS) steps = MAX_STEPS;
+  var bestT = null, bestErr = Infinity, t, i, k, per, n, err, worst;
+  for (k = 0; k <= steps; k++) {
+    t = tMin + k * STEP;
+    per = vAtTemp(mod.vmp, -Math.abs(mod.betaVmp), t);
+    if (!(per > 0)) continue;
+    worst = 0;
+    for (i = 0; i < readings.length; i++) {
+      n = readings[i] / per;
+      if (n < 1) { worst = Infinity; break; }
+      err = Math.abs(n - Math.round(n));
+      if (err > worst) worst = err;
+    }
+    if (worst < bestErr) { bestErr = worst; bestT = t; }
+  }
+  if (bestT === null || !isFinite(bestErr)) return null;
+  // Require every string within 2% of a whole count to call it solved.
+  per = vAtTemp(mod.vmp, -Math.abs(mod.betaVmp), bestT);
+  var counts = [];
+  for (i = 0; i < readings.length; i++) counts.push(Math.round(readings[i] / per));
+  return { t: bestT, per: per, counts: counts, err: bestErr, solved: bestErr <= 0.02 };
+}
+
+/* Design ceiling/floor for one module type against the PW3 input limits.
+   Cold Voc is the binding case for the maximum - a string that is legal at STC
+   can open above 550 V on a record-cold morning. */
+function stringLimits(mod) {
+  if (!mod) return null;
+  var vocCold = vAtTemp(mod.voc, -Math.abs(mod.betaVoc), mod.tRecord);
+  var vmpHot  = vAtTemp(mod.vmp, -Math.abs(mod.betaVmp), mod.tHi);
+  if (!(vocCold > 0) || !(vmpHot > 0)) return null;
+  return {
+    vocCold:  vocCold,
+    vmpHot:   vmpHot,
+    maxAbs:   Math.floor(V_SPEC.ABS_MAX / vocCold),
+    maxTrack: Math.floor(V_SPEC.MPPT_MAX / vocCold),
+    minTrack: Math.ceil(V_SPEC.MPPT_MIN / vmpHot)
+  };
+}
+
+function analyzeStrings(data, mod) {
+  var out = { rows: [], findings: [], sev: SEV.NONE, limits: null };
+  if (!mod) return out;
+  var add = mkAdd(out);
+  var lim = stringLimits(mod);
+  out.limits = lim;
+  var s, i, m, est;
+
+  // Loaded strings share a roof temperature. Solve it once across all of them -
+  // it collapses each per-string range to a single count when it fits.
+  var loadedV = [];
+  for (s = 0; s < data.sets.length; s++)
+    for (i = 0; i < 2; i++) {
+      m = data.sets[s].m[i];
+      if (m.entered && m.v > ON_V && m.on) loadedV.push(m.v);
+    }
+  var solved = loadedV.length ? solveCellTemp(loadedV, mod, mod.tLo, mod.tHi) : null;
+  if (solved && solved.solved) {
+    out.solvedT = solved.t;
+    out.solvedPer = solved.per;
+    add("info", "All " + loadedV.length + " producing string" + (loadedV.length > 1 ? "s" : "") +
+      " resolve to a whole module count at a cell temperature of " + fmt(solved.t) +
+      " degC (" + fmt(solved.per) + " V/module). Counts below are pinned to that fit" +
+      (loadedV.length > 1 ? " - strings on one roof share a temperature, so this is a strong constraint." : "."));
+  }
+
+  for (s = 0; s < data.sets.length; s++) {
+    for (i = 0; i < 2; i++) {
+      m = data.sets[s].m[i];
+      if (!m.entered || !(m.v > ON_V)) continue;
+      est = estimateModules(m.v, m.on, mod);
+      if (!est) continue;
+      // A solved roof temperature pins the count; keep the range as the fallback.
+      if (m.on && out.solvedPer) {
+        var nExact = m.v / out.solvedPer;
+        if (Math.abs(nExact - Math.round(nExact)) <= 0.02 && Math.round(nExact) >= 1) {
+          est.pinned = Math.round(nExact);
+        }
+      }
+      out.rows.push({ id: m.id, v: m.v, loaded: m.on, est: est });
+
+      if (!est.fits) {
+        add("info", "MPPT " + m.id + ": " + fmt(m.v) + " V does not land on a whole number of " +
+          "modules for the entered module data (nearest " + est.best + "). Check Voc/Vmp and the " +
+          "cell-temperature bracket.");
+      } else if (mod.plan > 0 && (mod.plan < est.lo || mod.plan > est.hi)) {
+        add("warning", "MPPT " + m.id + ": " + fmt(m.v) + " V " +
+          (m.on ? "under load" : "open-circuit") + " estimates " +
+          (est.lo === est.hi ? est.lo + " modules" : est.lo + "-" + est.hi + " modules") +
+          ", but the planset says " + mod.plan + ". Either the string is not built as drawn, " +
+          "or the module data entered here is wrong.");
+      }
+    }
+  }
+
+  // Planset reviewed against the hardware limits, independent of any reading.
+  if (lim && mod.plan > 0) {
+    if (mod.plan > lim.maxAbs) {
+      add("error", "Planset calls for " + mod.plan + " modules per string. At the " + fmt(mod.tRecord) +
+        " degC record low that string opens at " + fmt(mod.plan * lim.vocCold) + " V, over the " +
+        V_SPEC.ABS_MAX + " V absolute input maximum. Cold-morning overvoltage - a string this long " +
+        "can be legal at STC and still exceed the input rating. Max is " + lim.maxAbs + " for this module.");
+    } else if (mod.plan > lim.maxTrack) {
+      add("warning", "Planset calls for " + mod.plan + " modules per string, opening at " +
+        fmt(mod.plan * lim.vocCold) + " V at " + fmt(mod.tRecord) + " degC - above the " +
+        V_SPEC.MPPT_MAX + " V MPPT tracking top, though still under the " + V_SPEC.ABS_MAX +
+        " V input max. Expect reduced or no tracking on cold mornings.");
+    }
+    if (mod.plan < lim.minTrack) {
+      add("warning", "Planset calls for " + mod.plan + " modules per string. At " + fmt(mod.tHi) +
+        " degC cell that string runs at " + fmt(mod.plan * lim.vmpHot) + " V, below the " +
+        V_SPEC.MPPT_MIN + " V MPPT minimum. Too short to track on a hot roof - minimum is " +
+        lim.minTrack + ".");
+    }
+  }
+
+  return out;
+}
+
+/* ---------- Site review: cross-device checks ----------
+   IMPORTANT calibration note. A tech pastes each device in turn, so the readings
+   are NOT simultaneous - seconds to minutes apart. Grid frequency and voltage
+   genuinely drift in that window, so spread thresholds here are deliberately
+   loose: they exist to catch a unit reading something structurally different (a
+   failed sense connection, a unit on the wrong leg), not normal grid movement.
+   Tight thresholds would produce constant false positives in the field. */
+var SITE = {
+  FREQ_SPREAD: 0.5,    // Hz. Normal drift between pastes is well under 0.1.
+  VLL_SPREAD_PCT: 0.03,
+  LINE_SPREAD_PCT: 0.05,
+  PROD_RATIO: 0.5,     // per-module output below half the best unit
+  MAX_UNITS: 4         // PW3 base units per gateway (Expansions carry no PV)
+};
+
+function analyzeSite(gw, units, mod) {
+  var out = { findings: [], sev: SEV.NONE, units: [], gw: gw };
+  var add = mkAdd(out);
+  var i, u, vals, data, res, s, st, sres;
+
+  // ---- Per-unit: the existing single-unit logic, run on each pasted device ----
+  for (i = 0; i < units.length; i++) {
+    u = units[i];
+    if (!u.parsed) continue;
+    vals = u.parsed.mppt.values;
+    data = dataFromValues(vals);
+    res = [];
+    for (s = 0; s < data.sets.length; s++) {
+      res.push(data.sets[s].jumperable
+        ? analyzeJumperable(data.sets[s], u.spec)
+        : analyzeIndependent(data.sets[s], u.spec));
+    }
+    sres = mod ? analyzeStrings(data, mod) : null;
+    // AC checks run per unit with DC context, so clipping and the
+    // "DC present but not inverting" case can be judged together.
+    var dcW = unitDcWatts(vals);
+    var acres = analyzeAC(u.parsed, {
+      label: null,
+      dcW: dcW,
+      arrayKw: (sres && mod && mod.w) ? sumPinned(sres) * mod.w / 1000 : 0
+    });
+    st = overallStatus(res, data, sres);
+    if (acres.sev >= SEV.ERROR) st = { cls: "red", label: "Fault" };
+    else if (acres.sev >= SEV.WARN && st.cls === "green") st = { cls: "yellow", label: "Review" };
+    out.units.push({
+      label: u.label, parsed: u.parsed, data: data, results: res,
+      strings: sres, ac: acres, status: st, dcW: dcW,
+      modules: sres ? sumPinned(sres) : 0
+    });
+    if (st.cls === "red" && out.sev < SEV.ERROR) out.sev = SEV.ERROR;
+    else if (st.cls === "yellow" && out.sev < SEV.WARN) out.sev = SEV.WARN;
+  }
+
+  var n = out.units.length;
+  if (!n) return out;
+
+  if (n > SITE.MAX_UNITS) {
+    add("warning", n + " Powerwall 3 units entered. Tesla supports a maximum of " +
+      SITE.MAX_UNITS + " base units per gateway (plus up to 3 Expansion units, which " +
+      "carry no PV inputs). Check that these are all base units on one gateway.");
+  }
+
+  // ---- Per-unit device state ----
+  var versions = {}, modes = {}, freqs = [], vlls = [], l1s = [], l2s = [];
+  for (i = 0; i < n; i++) {
+    var p = out.units[i].parsed, L = out.units[i].label;
+
+    if (p.pwSwitch && !/^on$/i.test(p.pwSwitch)) {
+      add("error", L + ": Powerwall Switch reads \"" + p.pwSwitch + "\". That unit is " +
+        "not contributing. On a multi-unit site this is easy to miss - the site still " +
+        "produces and the other units mask it.");
+    }
+    if (p.inverterState && !/^active$/i.test(p.inverterState)) {
+      add("warning", L + ": Inverter State is \"" + p.inverterState +
+        "\" rather than Active. Expected at night or in standby; investigate if the " +
+        "other units are producing.");
+    }
+    if (p.batteryState && !/^active$/i.test(p.batteryState)) {
+      add("warning", L + ": Battery State is \"" + p.batteryState + "\".");
+    }
+    // DCDC State (A/B) is two converter channels. One down = half DC-DC capacity,
+    // which looks like mere underproduction from outside.
+    if (p.dcdc) {
+      var chans = p.dcdc.replace(/[()]/g, "").split("/");
+      var deadCh = [];
+      for (var c = 0; c < chans.length; c++)
+        if (chans[c].trim() && !/^active$/i.test(chans[c].trim()))
+          deadCh.push((c === 0 ? "A" : "B") + " (" + chans[c].trim() + ")");
+      if (deadCh.length === chans.length && chans.length) {
+        add("error", L + ": both DC-DC channels read " + p.dcdc + ". The battery cannot " +
+          "charge or discharge through this unit.");
+      } else if (deadCh.length) {
+        add("error", L + ": DC-DC channel " + deadCh.join(", ") + " is not active (" +
+          p.dcdc + "). The unit runs at roughly half battery throughput and will look " +
+          "like simple underproduction unless this line is read.");
+      }
+    }
+    if (p.version) versions[p.version] = (versions[p.version] || []).concat([L]);
+    if (p.inverterMode) modes[p.inverterMode] = (modes[p.inverterMode] || []).concat([L]);
+    if (p.freq !== null && p.freq > 0) freqs.push({ L: L, x: p.freq });
+    if (p.vll !== null && p.vll > 0) vlls.push({ L: L, x: p.vll });
+    if (p.line1 !== null && p.line1 > 0) l1s.push({ L: L, x: p.line1 });
+    if (p.line2 !== null && p.line2 > 0) l2s.push({ L: L, x: p.line2 });
+  }
+
+  // ---- Firmware skew ----
+  var vKeys = keysOf(versions);
+  if (vKeys.length > 1) {
+    var parts = [];
+    for (i = 0; i < vKeys.length; i++) parts.push(vKeys[i] + " on " + versions[vKeys[i]].join(", "));
+    add("warning", "Firmware differs across units: " + parts.join("; ") +
+      ". A partial update leaves units on mismatched builds and is invisible one " +
+      "screen at a time. Confirm the site finished updating.");
+  } else if (vKeys.length === 1 && n > 1) {
+    add("ok", "All " + n + " units on the same firmware (" + vKeys[0] + ").");
+  }
+
+  // ---- Inverter mode must agree: one unit forming while another follows is wrong ----
+  var mKeys = keysOf(modes);
+  if (mKeys.length > 1) {
+    var mp = [];
+    for (i = 0; i < mKeys.length; i++) mp.push(mKeys[i] + " on " + modes[mKeys[i]].join(", "));
+    add("error", "Units report different inverter modes: " + mp.join("; ") +
+      ". Units on one gateway should be in the same mode. Re-read both - if it " +
+      "persists, the units are not coordinating.");
+  }
+
+  // ---- Shared AC bus coherence ----
+  checkSpread(add, freqs, SITE.FREQ_SPREAD, null, "Frequency", "Hz",
+    "Units share one AC bus, so frequency should match. A gap this size points at a " +
+    "sense or connection problem rather than grid drift.");
+  checkSpread(add, vlls, null, SITE.VLL_SPREAD_PCT, "AC Voltage (L-L)", "V",
+    "Units share one bus. A spread this wide suggests a sense-wiring problem or a " +
+    "unit on the wrong legs.");
+  checkSpread(add, l1s, null, SITE.LINE_SPREAD_PCT, "Line 1", "V", "");
+  checkSpread(add, l2s, null, SITE.LINE_SPREAD_PCT, "Line 2", "V", "");
+
+  // ---- Gateway AC: the Grid block carries per-line voltage and frequency ----
+  if (gw) {
+    var gwAc = {
+      line1: gw.lines[0] ? gw.lines[0].v : null,
+      line2: gw.lines[1] ? gw.lines[1].v : null,
+      line3: gw.lines[2] ? gw.lines[2].v : null,
+      vll: null, freq: gw.lines[0] ? gw.lines[0].hz : null,
+      maxCurrent: null, inverterState: null
+    };
+    var gwRes = analyzeAC(gwAc, { label: "Gateway" });
+    for (i = 0; i < gwRes.findings.length; i++)
+      add(gwRes.findings[i].t, gwRes.findings[i].txt);
+  }
+
+  // ---- Gateway cross-checks ----
+  if (gw) {
+    if (gw.gridState && !/compliant/i.test(gw.gridState))
+      add("warning", "Gateway Grid State reads \"" + gw.gridState + "\" rather than Compliant.");
+
+    var forming = mKeys.length === 1 && /forming/i.test(mKeys[0]);
+    if (gw.contactor && !/closed/i.test(gw.contactor)) {
+      if (forming) {
+        add("info", "Gateway contactor is " + gw.contactor + " and the units are grid " +
+          "forming - the site is islanded. Consistent, but confirm that is intended.");
+      } else {
+        add("error", "Gateway contactor is \"" + gw.contactor + "\" while the units are " +
+          "not grid forming. The site is disconnected from the grid and not islanding.");
+      }
+    }
+    if (gw.lines[2] && gw.lines[2].v > 30) {
+      add("info", "Gateway reports Line 3 at " + fmt(gw.lines[2].v) + " V - this is a " +
+        "three-phase service. This tool's PV input checks still apply per MPPT, but the " +
+        "AC comparisons above assume split phase.");
+    }
+    // Gateway vs unit line voltage: a large delta is voltage drop or a sense fault.
+    for (i = 0; i < 2; i++) {
+      var gwl = gw.lines[i];
+      if (!gwl || !(gwl.v > 0)) continue;
+      var arr = i === 0 ? l1s : l2s;
+      for (var q = 0; q < arr.length; q++) {
+        var dv = Math.abs(arr[q].x - gwl.v);
+        if (dv / gwl.v > SITE.LINE_SPREAD_PCT) {
+          add("warning", arr[q].L + " reports Line " + (i + 1) + " at " + fmt(arr[q].x) +
+            " V but the gateway reads " + fmt(gwl.v) + " V (" + fmt(dv) + " V apart). " +
+            "Check the sense conductors and terminations.");
+        }
+      }
+    }
+  }
+
+  // ---- Production balance, normalised per module ----
+  // Raw watts per unit are not comparable: arrays legitimately differ. With module
+  // counts solved by the string counter, watts-per-module IS comparable.
+  var perMod = [];
+  for (i = 0; i < n; i++) {
+    if (out.units[i].modules > 0 && out.units[i].dcW > 0)
+      perMod.push({ L: out.units[i].label, x: out.units[i].dcW / out.units[i].modules,
+                    w: out.units[i].dcW, m: out.units[i].modules });
+  }
+  if (perMod.length > 1) {
+    var best = perMod[0];
+    for (i = 1; i < perMod.length; i++) if (perMod[i].x > best.x) best = perMod[i];
+    for (i = 0; i < perMod.length; i++) {
+      if (perMod[i] !== best && perMod[i].x < best.x * SITE.PROD_RATIO) {
+        add("warning", perMod[i].L + " is producing " + fmt(perMod[i].x) + " W per module (" +
+          fmt(perMod[i].w) + " W over " + perMod[i].m + " modules) against " +
+          fmt(best.x) + " W per module on " + best.L + ". Normalised for array size, " +
+          "that unit is underperforming - check for shading, a soiled or failed string, " +
+          "or a DC connection on that unit.");
+      }
+    }
+  } else if (n > 1 && !mod) {
+    add("info", "Select a module above to compare production between units. Raw watts " +
+      "are not comparable across units with different array sizes; watts per module are.");
+  }
+
+  return out;
+}
+
+function keysOf(o) { var k = [], p; for (p in o) if (o.hasOwnProperty(p)) k.push(p); return k; }
+
+function sumPinned(sres) {
+  var t = 0, i;
+  for (i = 0; i < sres.rows.length; i++)
+    if (sres.rows[i].est.pinned) t += sres.rows[i].est.pinned;
+  return t;
+}
+
+/* Spread check over one metric across units. Absolute tolerance or fractional,
+   whichever was supplied. */
+function checkSpread(add, arr, absTol, pctTol, name, unit, why) {
+  if (arr.length < 2) return;
+  var lo = arr[0], hi = arr[0], i;
+  for (i = 1; i < arr.length; i++) {
+    if (arr[i].x < lo.x) lo = arr[i];
+    if (arr[i].x > hi.x) hi = arr[i];
+  }
+  var spread = hi.x - lo.x;
+  var tol = absTol !== null && absTol !== undefined ? absTol : hi.x * pctTol;
+  if (spread > tol) {
+    add("warning", name + " differs across units: " + fmt(lo.x) + " " + unit + " on " +
+      lo.L + " vs " + fmt(hi.x) + " " + unit + " on " + hi.L + " (" + fmt(spread) + " " +
+      unit + " apart). " + why);
+  }
 }
 
 /* ---------- Per-set analysis ---------- */
@@ -670,8 +1790,14 @@ function analyzeIndependent(set, spec) {
 /* ---------- Render ---------- */
 
 function jumperClass(j) {
-  if (j === "Required") return "j-in";
-  if (j === "OUT" || j === "OUT or faulty") return "j-out";
+  // "Required" means current demands a jumper and we CANNOT confirm one is
+  // installed - a working jumpered pair and two matched independent strings
+  // read identically. It is an unconfirmed state carrying a "verify visually"
+  // finding, not a pass, so it must not render in the same class as either a
+  // confirmed-good result (j-in) or a confirmed-bad one (j-error).
+  if (j === "Not required") return "j-in";
+  if (j === "Required") return "j-out";
+  if (j === "OUT" || j === "OUT or faulty") return "j-error";
   if (j === "N/A" || j === "-") return "j-na";
   return "j-unk";
 }
@@ -680,6 +1806,8 @@ function showErrors(errs) {
   document.getElementById("status").innerHTML =
     '<div class="status-bar red"><span class="status-dot"></span><span>Check your data</span></div>';
   document.getElementById("config").innerHTML = "";
+  var se = document.getElementById("strings"); if (se) se.innerHTML = "";
+  var ae = document.getElementById("acOut"); if (ae) ae.innerHTML = "";
   var h = '<div class="findings-section"><div class="findings-title">Issues</div>';
   for (var i = 0; i < errs.length; i++) h += '<div class="finding error">' + esc(errs[i]) + "</div>";
   document.getElementById("findings").innerHTML = h + "</div>";
@@ -690,15 +1818,23 @@ function showNotice(txt) {
   document.getElementById("status").innerHTML =
     '<div class="status-bar grey"><span class="status-dot"></span><span>No assessment</span></div>';
   document.getElementById("config").innerHTML = "";
+  var sn = document.getElementById("strings"); if (sn) sn.innerHTML = "";
+  var an = document.getElementById("acOut"); if (an) an.innerHTML = "";
   document.getElementById("findings").innerHTML =
     '<div class="findings-section"><div class="findings-title">Note</div><div class="finding info">' +
     esc(txt) + "</div></div>";
   document.getElementById("output").classList.add("active");
 }
 
-function overallStatus(results, data) {
+function overallStatus(results, data, sres, acres) {
   var sev = SEV.NONE, i, j;
   for (i = 0; i < results.length; i++) if (results[i].sev > sev) sev = results[i].sev;
+  // An AC fault stands on its own: a unit can be perfectly wired on the DC side
+  // and still be unable to export because the service voltage is out of range.
+  if (acres && acres.sev > sev) sev = acres.sev;
+  // A planset that overvoltages the input is a fault whether or not the array is
+  // producing right now - fold string severity in before the no-production check.
+  if (sres && sres.sev > sev) sev = sres.sev;
 
   var anyLive = false;
   for (i = 0; i < data.sets.length; i++)
@@ -713,8 +1849,8 @@ function overallStatus(results, data) {
   return { cls: "green", label: "Healthy" };
 }
 
-function render(results, data) {
-  var st = overallStatus(results, data);
+function render(results, data, sres, acres) {
+  var st = overallStatus(results, data, sres, acres);
   var i, j;
 
   document.getElementById("status").innerHTML =
@@ -734,10 +1870,15 @@ function render(results, data) {
   cfg += "</div>";
   document.getElementById("config").innerHTML = cfg;
 
+  renderStrings(sres);
+  renderAC(acres);
+
   var order = { error: 0, warning: 1, ok: 2, info: 3 };
   var all = [];
   for (i = 0; i < results.length; i++)
     for (j = 0; j < results[i].findings.length; j++) all.push(results[i].findings[j]);
+  if (sres) for (j = 0; j < sres.findings.length; j++) all.push(sres.findings[j]);
+  if (acres) for (j = 0; j < acres.findings.length; j++) all.push(acres.findings[j]);
   all.sort(function (a, b) { return order[a.t] - order[b.t]; });
 
   var f = '<div class="findings-section"><div class="findings-title">Findings</div>';
@@ -745,6 +1886,66 @@ function render(results, data) {
   document.getElementById("findings").innerHTML = f + "</div>";
 
   document.getElementById("output").classList.add("active");
+}
+
+function renderStrings(sres) {
+  var el = document.getElementById("strings");
+  if (!el) return;
+  if (!sres || (!sres.rows.length && !sres.limits)) { el.innerHTML = ""; return; }
+
+  var h = '<div class="findings-section"><div class="findings-title">String estimate</div>';
+  var i, r, est, txt;
+
+  for (i = 0; i < sres.rows.length; i++) {
+    r = sres.rows[i]; est = r.est;
+    if (est.pinned) {
+      txt = est.pinned + ' <span class="rng">modules</span>';
+    } else if (!est.fits) {
+      txt = "~" + est.best + ' <span class="rng">(no whole-module fit)</span>';
+    } else if (est.lo === est.hi) {
+      txt = est.lo + ' <span class="rng">modules</span>';
+    } else {
+      txt = est.lo + "\u2013" + est.hi + ' <span class="rng">modules (~' + est.best + ")</span>";
+    }
+    h += '<div class="str-row"><span class="str-id">MPPT ' + r.id + " &middot; " + fmt(r.v) + " V " +
+         (r.loaded ? "loaded" : "open-circuit") + '</span><span class="str-val">' + txt + "</span></div>";
+  }
+
+  if (!sres.rows.length) {
+    h += '<div class="str-row"><span class="str-id">No input with voltage present</span>' +
+         '<span class="str-val">&mdash;</span></div>';
+  }
+
+  if (sres.limits) {
+    h += '<div class="str-limits"><b>For this module on a PW3:</b> max <b>' + sres.limits.maxAbs +
+      "</b> modules/string under the " + V_SPEC.ABS_MAX + " V input max at " + fmt(sres.limits.vocCold) +
+      " V/module cold Voc (" + sres.limits.maxTrack + " to stay inside the " + V_SPEC.MPPT_MAX +
+      " V MPPT range); min <b>" + sres.limits.minTrack + "</b> to hold the " + V_SPEC.MPPT_MIN +
+      " V floor at " + fmt(sres.limits.vmpHot) + " V/module hot Vmp.<br>" +
+      "Ranges assume a cell temperature between the low and high entered above. " +
+      "Estimates only \u2014 confirm against the planset and a physical count.</div>";
+  }
+
+  el.innerHTML = h + "</div>";
+}
+
+function renderAC(acres) {
+  var el = document.getElementById("acOut");
+  if (!el) return;
+  if (!acres) { el.innerHTML = ""; return; }
+  var r = acres.rating;
+  if (!r && !acres.findings.length) { el.innerHTML = ""; return; }
+  var h = '<div class="findings-section"><div class="findings-title">AC side</div>';
+  if (r) {
+    h += '<div class="str-row"><span class="str-id">Configured output</span>' +
+         '<span class="str-val">' + r.kw + " kW <span class=\"rng\">/ " + r.a +
+         " A / " + r.ocpd + " A OCPD</span></span></div>";
+  }
+  h += '<div class="str-limits">Voltage is checked against ANSI C84.1 Range A ' +
+       "(114-126 V per leg) and the IEEE 1547 continuous operating range " +
+       "(105.6-132 V). A reading outside 1547 explains a unit that has stopped " +
+       "exporting without any PV fault.</div>";
+  el.innerHTML = h + "</div>";
 }
 
 function renderSpecNote() {
@@ -766,12 +1967,27 @@ if (typeof document !== "undefined" && document.getElementById("form")) {
 
   document.getElementById("variant").addEventListener("change", renderSpecNote);
 
+  fillPresets();
+  var presetSel = document.getElementById("modPreset");
+  if (presetSel) presetSel.addEventListener("change", applyPreset);
+  ["modVoc","modVmp","modBVoc","modBVmp","modTLo","modTHi","modTRec"].forEach(function (id) {
+    var f = document.getElementById(id);
+    if (f) f.addEventListener("input", function () {
+      var s = document.getElementById("modPreset");
+      // Hand-editing a preset's numbers means it is no longer that preset.
+      if (s && s.value !== "" && s.value !== "custom") s.value = "custom";
+      updateModLimits();
+    });
+  });
+
   document.getElementById("clearBtn").addEventListener("click", function () {
     document.getElementById("form").reset();
     document.getElementById("output").classList.remove("active");
     document.getElementById("status").innerHTML = "";
     document.getElementById("config").innerHTML = "";
     document.getElementById("findings").innerHTML = "";
+    document.getElementById("strings").innerHTML = "";
+    document.getElementById("acOut").innerHTML = "";
     // The paste text itself is left alone - that is what "Clear paste" is for -
     // but a stale "All 6 MPPTs matched" over an emptied form would be a lie.
     document.getElementById("pasteStatus").innerHTML = "";
@@ -830,6 +2046,7 @@ if (typeof document !== "undefined" && document.getElementById("form")) {
   document.getElementById("form").addEventListener("submit", function (e) {
     e.preventDefault();
     try {
+      if (siteMode) return runSiteAnalysis();
       var spec = VARIANTS[document.getElementById("variant").value];
       var data = readAll();
 
@@ -848,14 +2065,130 @@ if (typeof document !== "undefined" && document.getElementById("form")) {
         var set = data.sets[i];
         results.push(set.jumperable ? analyzeJumperable(set, spec) : analyzeIndependent(set, spec));
       }
-      render(results, data);
+      var sres = analyzeStrings(data, readModule());
+      // Single-unit AC context comes from the paste box when one was used. Typed
+      // entry has no AC data, so these checks are simply absent rather than faked.
+      var acres = null;
+      var pb = document.getElementById("pasteBox");
+      if (pb && /\S/.test(pb.value)) {
+        var pv = parseVitals(pb.value);
+        var mm = readModule();
+        acres = analyzeAC(pv.ac, {
+          dcW: unitDcWatts(pv.values),
+          arrayKw: (mm && mm.w && sres) ? sumPinned(sres) * mm.w / 1000 : 0
+        });
+      }
+      render(results, data, sres, acres);
     } catch (err) {
       showErrors(["Internal error: " + (err && err.message ? err.message : String(err)) +
                   ". Please report this along with the values you entered."]);
     }
   });
 
+  fillPresets();
+  setMode(false);
+  document.getElementById("tabUnit").addEventListener("click", function () { setMode(false); });
+  document.getElementById("tabSite").addEventListener("click", function () { setMode(true); });
+  document.getElementById("addUnit").addEventListener("click", function () { addUnitBlock(); });
+
+  // Site mode has no <form> of its own - #inputsCard (which owns the shared
+  // <form id="form"> and its Analyze/Clear buttons) is hidden whenever site
+  // mode is active, so without these there is literally no visible way to
+  // trigger runSiteAnalysis(). It was already wired into the form's submit
+  // handler (if (siteMode) return runSiteAnalysis();) but unreachable.
+  document.getElementById("siteAnalyzeBtn").addEventListener("click", function () {
+    try { runSiteAnalysis(); }
+    catch (err) {
+      showErrors(["Internal error: " + (err && err.message ? err.message : String(err)) +
+                  ". Please report this along with the values you entered."]);
+    }
+  });
+  document.getElementById("siteClearBtn").addEventListener("click", function () {
+    document.getElementById("gwPaste").value = "";
+    var blocks = document.querySelectorAll("#unitList .u-paste");
+    for (var bi = 0; bi < blocks.length; bi++) blocks[bi].value = "";
+    clearOutputs();
+    window.scrollTo(0, 0);
+  });
+
   renderSpecNote();
+}
+
+function runSiteAnalysis() {
+  var units = readSiteUnits();
+  if (!units.length) {
+    return showNotice("No unit readings pasted. Add a Powerwall and paste its vitals " +
+      "from Tesla One > System > Devices, then press Analyze.");
+  }
+  var noMppt = [], i;
+  for (i = 0; i < units.length; i++)
+    if (units[i].parsed.mppt.count === 0) noMppt.push(units[i].label);
+  if (noMppt.length === units.length) {
+    return showErrors(["No MPPT readings found in any pasted unit. Make sure the paste " +
+      "includes the Solar DC Inputs section."]);
+  }
+
+  var gwRaw = document.getElementById("gwPaste").value;
+  var gw = /\S/.test(gwRaw) ? parseGateway(gwRaw) : null;
+  var site = analyzeSite(gw, units, readModule());
+
+  // Mirror overallStatus()'s single-unit rule: never report "healthy" across a
+  // site with zero DC production - the tool cannot tell night from a dead site,
+  // per-unit cards already say so individually, and the top banner must not
+  // contradict them by defaulting to green.
+  var anyProducing = false;
+  for (i = 0; i < site.units.length; i++) if (site.units[i].dcW > 0) anyProducing = true;
+
+  var st;
+  if (site.sev >= SEV.ERROR) st = { cls: "red", label: "Fault" };
+  else if (site.sev >= SEV.WARN) st = { cls: "yellow", label: "Review" };
+  else if (!anyProducing) st = { cls: "grey", label: "No production - cannot assess" };
+  else st = { cls: "green", label: "Site healthy" };
+
+  // #output is shown by the "active" class (.output-section.active{display:block}),
+  // NOT by the hidden attribute - nothing in this file's CSS references [hidden] on
+  // this element, so setting oc.hidden=false alone left the panel invisible even
+  // though its findings HTML was correctly written into the DOM. Unreachable until
+  // the site-mode Analyze button existed to call this function; now a real blocker.
+  var oc = document.getElementById("output");
+  if (oc) oc.classList.add("active");
+  var sub = site.units.length + " unit" + (site.units.length > 1 ? "s" : "") +
+            " reviewed" + (gw ? " with gateway" : "");
+  document.getElementById("status").innerHTML =
+    '<div class="status-bar ' + st.cls + '"><span class="status-dot"></span><span>' +
+    esc(st.label) + " \u2014 " + esc(sub) + "</span></div>";
+  document.getElementById("config").innerHTML = "";
+  renderSite(site);
+
+  // Per-unit findings, each prefixed with its unit, then the cross-unit findings.
+  var all = [], j, u;
+  for (i = 0; i < site.units.length; i++) {
+    u = site.units[i];
+    for (j = 0; j < u.results.length; j++)
+      for (var k = 0; k < u.results[j].findings.length; k++)
+        all.push({ t: u.results[j].findings[k].t,
+                   txt: u.label + " \u00b7 " + u.results[j].findings[k].txt });
+    if (u.strings)
+      for (j = 0; j < u.strings.findings.length; j++)
+        all.push({ t: u.strings.findings[j].t,
+                   txt: u.label + " \u00b7 " + u.strings.findings[j].txt });
+    if (u.ac)
+      for (j = 0; j < u.ac.findings.length; j++)
+        all.push({ t: u.ac.findings[j].t,
+                   txt: u.label + " \u00b7 " + u.ac.findings[j].txt });
+  }
+  for (i = 0; i < site.findings.length; i++) all.push(site.findings[i]);
+
+  var rank = { error: 0, warning: 1, info: 2, ok: 3 };
+  all.sort(function (a, b) { return (rank[a.t] || 9) - (rank[b.t] || 9); });
+
+  var h = '<div class="findings-section"><div class="findings-title">Findings</div>';
+  if (!all.length) h += '<div class="finding ok">Nothing flagged across the pasted devices.</div>';
+  for (i = 0; i < all.length; i++)
+    h += '<div class="finding ' + all[i].t + '">' + esc(all[i].txt) + "</div>";
+  document.getElementById("findings").innerHTML = h + "</div>";
+  document.getElementById("strings").innerHTML = "";
+  document.getElementById("acOut").innerHTML = "";
 }
 
 /* Exported for the Node test harness; harmless in the browser. */
@@ -864,7 +2197,16 @@ if (typeof module !== "undefined" && module.exports) {
     VARIANTS: VARIANTS, V_SPEC: V_SPEC, SEV: SEV, SETS: SETS, ON_A: ON_A, ON_V: ON_V,
     analyzeJumperable: analyzeJumperable, analyzeIndependent: analyzeIndependent,
     overallStatus: overallStatus, vTol: vTol, hardErrors: hardErrors,
-    parseVitals: parseVitals, pasteMessage: pasteMessage, normalizePaste: normalizePaste
+    parseVitals: parseVitals, pasteMessage: pasteMessage, normalizePaste: normalizePaste,
+    MOD: MOD, MODULES: MODULES, vAtTemp: vAtTemp, estimateModules: estimateModules,
+    solveCellTemp: solveCellTemp, grabLabelled: grabLabelled,
+    AC_SPEC: AC_SPEC, AC_RATINGS: AC_RATINGS, ratingFromCurrent: ratingFromCurrent,
+    vClass: vClass, analyzeAC: analyzeAC, acNum: acNum,
+    SITE: SITE, SEC_NAMES: SEC_NAMES, sliceSection: sliceSection, numUnit: numUnit,
+    parseGateway: parseGateway, parseUnit: parseUnit, dataFromValues: dataFromValues,
+    sumPinned: sumPinned, keysOf: keysOf,
+    unitDcWatts: unitDcWatts, analyzeSite: analyzeSite, checkSpread: checkSpread,
+    stringLimits: stringLimits, analyzeStrings: analyzeStrings
   };
 }
 </script>
