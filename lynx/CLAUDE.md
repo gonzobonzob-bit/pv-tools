@@ -35,7 +35,10 @@ CSS variables (defined in `:root`):
 - `--amber` #e3a23a, `--amber-bg` #2c2210, `--amber-line` #4a3a1a
 - `--mono` Courier New stack, `--sans` system stack
 
-Status banners: solid color fill (`background: var(--red/green/amber)`), white text.
+Status banners: solid color fill (`background: var(--red/green/amber)`), dark ink text
+(`color: var(--bg)`) — not white. Matches the pattern in the companion tool
+`pw3-string-analyzer`: white text on amber/green fails WCAG AA contrast (2.2:1 / 2.4:1),
+dark ink on the same fills clears AA comfortably (5.4:1 / 8.2:1 / 7.5:1 across red/amber/green).
 Buttons: orange fill for primary actions (`--orange`), card-colored for reset/secondary.
 Do NOT revert to the old light theme (white cards, `--blue`, Inter font, border-left banners).
 

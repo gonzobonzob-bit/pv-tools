@@ -62,7 +62,7 @@
   }
   .upload-label:hover{background:var(--orange-light);}
   .upload-hint{font-size:12px; color:var(--muted); margin-top:10px;}
-  .filename{font-family:var(--mono); font-size:12.5px; color:var(--ink); margin-top:10px;}
+  .filename{font-family:var(--mono); font-size:12.5px; color:var(--ink); margin-top:10px; overflow-wrap:anywhere;}
   .sources{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.6;}
   .sources a{color:var(--muted); text-decoration:underline; text-underline-offset:2px;}
   .sources a:hover{color:var(--ink);}
@@ -101,13 +101,16 @@
   .show-chart:hover{text-decoration:underline;}
   .error-box{background:var(--red-bg); border:1px solid var(--red-line); color:var(--red); border-radius:8px; padding:12px 16px; font-size:13px; margin-bottom:18px;}
 
-  .status-banner{border-radius:8px 8px 0 0; padding:18px 22px; color:#fff; display:flex; align-items:center; gap:14px;}
+  /* Solid fills with dark ink, not white text: matches pw3-string-analyzer's
+     banner pattern, chosen there because white-on-amber/green fails WCAG AA
+     contrast and needs to stay legible outdoors in direct sun. */
+  .status-banner{border-radius:8px 8px 0 0; padding:18px 22px; color:var(--bg); display:flex; align-items:center; gap:14px;}
   .status-banner.flag{background:var(--red);}
   .status-banner.ok{background:var(--green);}
   .status-banner.warn{background:var(--amber);}
   .status-banner .icon{font-size:30px; line-height:1;}
-  .status-banner .text h2{margin:0; font-size:19px; color:#fff;}
-  .status-banner .text p{margin:2px 0 0; font-size:12.5px; opacity:.92; color:#fff;}
+  .status-banner .text h2{margin:0; font-size:19px; color:var(--bg);}
+  .status-banner .text p{margin:2px 0 0; font-size:12.5px; opacity:.92; color:var(--bg);}
 
   .quick-section{background:var(--card-alt); border:none; border-radius:0 0 8px 8px; padding:4px 0 8px; margin-bottom:22px;}
   .quick-line{display:flex; align-items:flex-start; gap:10px; padding:11px 22px; border-bottom:1px solid rgba(255,255,255,.05); text-decoration:none; color:var(--ink);}
@@ -146,7 +149,7 @@
   .plain-summary p{margin-top:6px; font-style:italic;}
 
   .meta-row{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:10px; flex-wrap:wrap; gap:6px;}
-  .meta-row b{color:var(--ink); font-family:var(--mono);}
+  .meta-row b{color:var(--ink); font-family:var(--mono); overflow-wrap:anywhere; min-width:0;}
   .chart-card{position:relative; background:var(--card-alt); border:none; border-radius:8px; padding:14px 16px; margin-bottom:18px;}
   .chart-legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin-bottom:8px;}
   .chart-legend span{display:inline-flex; align-items:center; gap:6px;}
@@ -160,6 +163,8 @@
 
   #results{display:none;}
   footer{text-align:center; font-size:11px; color:var(--muted); margin-top:18px;}
+  footer a{color:var(--orange-light); text-decoration:underline; text-underline-offset:2px;}
+  footer a:hover, footer a:visited{color:var(--orange-light);}
 
   /* Microinverter section — demoted to a collapsed disclosure at the
      bottom of the page for now. Native <details>/<summary> needs no JS
@@ -193,7 +198,7 @@
       <span class="title-subtitle">PV CT Data Reviewer</span>
       <span class="title-version">v1.18</span>
     </div>
-    <p>Drop in a CSV export for an instant diagnostic — negative-PV artifacts, Grid/Load balance, leg correlation, cross-talk detection. Runs entirely in your browser. No upload, no server, no AI call.</p>
+    <p>Drop in a CSV export for an instant diagnostic — negative-PV artifacts, Grid/Load balance, production-into-usage bleed (a monitoring sensor, or "CT" &mdash; current transformer &mdash; picking up the wrong conductor), leg correlation, dropout detection. Runs entirely in your browser. No upload, no server, no AI call.</p>
   </header>
 
   <div class="examples-bar">
@@ -266,7 +271,18 @@
     </div>
   </div>
 
-  <footer>Checks: negative-PV diagnosis, Grid=Load−PV balance (when available), leg-balance, per-leg consumption flatline, Production/Load step-change correlation (cross-talk check).</footer>
+  <footer>Checks: negative-PV diagnosis, Grid=Load−PV balance (when available), production-into-usage bleed, leg-balance, per-leg consumption flatline, Production/Load step-change correlation (cross-talk check — two sensors picking up each other's signal). <a href="#dispatcher-guide" id="dispatcherLink" onclick="document.getElementById('dispatcher-guide').open=true">How to read a flag &amp; when to dispatch &rarr;</a></footer>
+
+  <details class="micro-disclosure" id="dispatcher-guide">
+    <summary>How to read a flag &amp; when to dispatch</summary>
+    <div class="micro-body">
+      <p><strong>What "bleed" measures:</strong> k = how much reported usage rises per watt of production. k = 0.48 means for every 100 W the array produces, reported usage rises 48 W — usually a consumption CT clamped on the wrong conductor, not a real electrical fault.</p>
+      <p><strong>strong / moderate</strong> — clear slope, most or many days affected. Compare the reported figure against the customer's utility bill first; if the bill confirms the gap, it's CT placement and dispatch is justified. If the bill matches reported usage, there's a real daytime load and no truck is needed.</p>
+      <p><strong>intermittent</strong> — some days flagged, others not. Wiring does not come and go, so this is usually <em>not</em> a wiring fault — ask about a pool pump, EV charger, or timed HVAC before doing anything else.</p>
+      <p><strong>Before booking a truck:</strong> (1) confirm the consumption CT is configured whole-home in the portal, not on a PV backfeed branch — free and remote; (2) compare against the bill — this is the check that actually settles it; (3) only then dispatch.</p>
+      <p><strong>Confidence:</strong> the strong/moderate threshold rests on 4 systems, 16 days of confirmed outcomes — a real lead, not a settled verdict. A genuinely solar-timed load can produce a similar slope. Say this plainly if anyone asks how sure the tool is.</p>
+    </div>
+  </details>
 
   <details class="micro-disclosure">
     <summary>Microinverter Troubleshooting (beta) — internal DC/AC diagnostic, separate from CT metering</summary>
@@ -748,10 +764,9 @@ function rowsFromCSV(text) {
       return { error: 'This looks like a per-microinverter export (DateTime / Average Real Power / DC telemetry columns). Load it in the Microinverter Compare section below — alongside a second unit\'s export — rather than here in the System CT Review.' };
     }
     // Distinguish a genuinely empty/comms-error export from a real export
-    // in a format this tool does not yet support (e.g. QCells/Q.OMMAND,
-    // which has no parser here yet) — these call for different next steps,
-    // and surfacing the actual headers makes the gap actionable rather than
-    // a dead end.
+    // in a format this tool does not map at all — these call for different
+    // next steps, and surfacing the actual headers makes the gap actionable
+    // rather than a dead end.
     const dataRows = table.slice(1);
     const timeColGuess = header.findIndex(h => /date|time/i.test(h));
     const totalCells = dataRows.reduce((s, r) => s + r.filter((c, idx) => idx !== timeColGuess).length, 0);
@@ -760,7 +775,7 @@ function rowsFromCSV(text) {
     if (fillRate < 0.1) {
       return { error: `This file contains almost no usable data (${(fillRate*100).toFixed(0)}% of cells filled) — most consistent with a communication or export error rather than an unsupported file format. Re-export and confirm the date range before assuming a platform/format issue.` };
     }
-    return { error: `${schema.reason} This file has real data but does not match a format currently supported by this tool (Enphase and Tesla export formats are mapped; others, including QCells/Q.OMMAND, are not yet). Column headers found: ${header.join(', ')}. Forward this file to extend support for this format.` };
+    return { error: `${schema.reason} This file has real data but does not match a format currently supported by this tool (Enphase, Tesla, and QCells/Q.OMMAND export formats are mapped; this file's columns don't match any of them). Column headers found: ${header.join(', ')}. Forward this file to extend support for this format.` };
   }
 
   const timeIdxFound = header.findIndex(h => /^datetime$/i.test(h.trim())) !== -1
@@ -2342,11 +2357,15 @@ function runDiagnostic(parsed) {
     }
   } else if (bleed.severity === 'intermittent') {
     const pct = Math.round(bleed.maxK * 100);
-    items.push({ type:'issue',
+    // 'info', not 'issue': wiring does not come and go, so an on-and-off
+    // pattern is usually a solar-scheduled load, not a CT fault (see
+    // DISPATCHER_REFERENCE.md). Must not drive the red TROUBLESHOOT banner
+    // the way a confirmed 'strong'/'moderate' bleed correctly does.
+    items.push({ type:'info',
       headline:`[WORTH CHECKING] Usage tracks production on ${bleed.nFlaggedDays} of ${bleed.nDays} days, not all of them`,
       resolution:'distinguish weather-driven load from intermittent CT bleed',
       measured:`Bleed slope reached k = ${bleed.maxK.toFixed(2)} on its strongest day (${escHtml(bleed.peakDay)}), median across all days ${bleed.medianK.toFixed(2)}.`,
-      seeing:`On some days consumption scales with production the way a miswired consumption CT would, but on the other ${bleed.nDays - bleed.nFlaggedDays} ${bleed.nDays - bleed.nFlaggedDays === 1 ? 'day' : 'days'} it does not. Wiring does not come and go — a genuine CT placement fault shows on every sunny day. An on-and-off pattern fits weather-driven load instead: air conditioning on the hot days, a pool pump or EV charger on a solar-priority schedule, a heat pump. This data alone cannot separate the two.`,
+      seeing:`On some days consumption scales with production the way a miswired consumption CT would, but on the other ${bleed.nDays - bleed.nFlaggedDays} ${bleed.nDays - bleed.nFlaggedDays === 1 ? 'day' : 'days'} it does not. Wiring does not come and go — a genuine CT placement fault shows on every sunny day. An on-and-off pattern fits weather-driven load instead: air conditioning on the hot days, a pool pump or EV charger on a solar-priority schedule, a heat pump. This data alone cannot separate the two. (Same reference set as the strong/moderate tier: 4 systems, 16 days — a lead worth asking about, not a settled verdict.)`,
       recommendation:`<strong>Remote check:</strong> ask what large loads run on a solar-linked or daytime schedule — a pool pump, EV charger, or smart thermostat set to run on solar explains this completely and needs no action. Cross-check the flagged dates against local weather: if they were the hot days, that is the answer. <strong>If it escalates:</strong> if there is no solar-scheduled load and the flagged days do not line up with weather, re-pull a longer export — if the pattern turns out to be present on every sunny day, it moves into CT placement territory and warrants a visit.`,
       plainSummary:`Usage rises with production on some days but not others. That on-and-off pattern usually means something big runs during the day on purpose, not a wiring problem. One question to the customer about daytime appliances will normally settle it.`,
       sources: [CITATIONS.ctCross] });
@@ -5857,7 +5876,7 @@ function renderChart(points, mode, highlights, zoom) {
   for (let i = 0; i < numXLabels; i++) {
     const idx = Math.round(i * (n - 1) / (numXLabels - 1 || 1));
     const anchor = i === 0 ? 'start' : (i === numXLabels - 1 ? 'end' : 'middle');
-    xLabels += `<text x="${x(idx).toFixed(1)}" y="${H - 8}" font-size="9" fill="#6b7280" text-anchor="${anchor}" font-family="Courier New, monospace">${formatLabel(sampled[idx]?.time)}</text>`;
+    xLabels += `<text x="${x(idx).toFixed(1)}" y="${H - 8}" font-size="9" fill="#6b7280" text-anchor="${anchor}" font-family="Courier New, monospace">${escHtml(formatLabel(sampled[idx]?.time))}</text>`;
   }
 
   const svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;">
