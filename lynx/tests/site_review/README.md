@@ -27,6 +27,29 @@ doesn't need its own exact duplicate.
 Any change to this table on a future engine version is a regression signal,
 not an expected update — re-verify against the raw CSVs before accepting it.
 
+### Table is stale as of v1.20 — three GOOD rows now read TROUBLESHOOT
+
+Re-ran on 2026-08-05 against v1.20. Jul 19 (`...085420`), Jul 18 (`...085425`)
+and Jun 20 (`...085511`) each now carry one issue: the PV-into-load bleed check
+(`checkPvBleed()`, added v1.14, after this table was written for v1.10).
+Measured daylight slopes are k = 0.357, 0.397 and 0.324 — above the 0.25 flag
+threshold, below the 0.45 strong bar.
+
+**This is not a regression.** v1.18 and v1.20 produce identical output on these
+three files; the table simply predates the check. All other rows still match.
+
+Whether those three flags are correct is genuinely open. k = 0.32–0.40 is the
+check's known-fragile zone, where a mild CT bleed and a real solar-correlated
+household load (pool pump, timed EV charging, AC ramping with the sun) are not
+separable from telemetry alone. This is the same site as the masked-dropout
+lifecycle above, so a marginal CT is plausible — but there is no confirmed
+ticket outcome to settle it, and it should not be recorded as either a true or
+false positive until there is.
+
+Do not "fix" the table by relaxing the bleed threshold to make these read GOOD.
+The threshold rests on a separate labelled set; changing it to satisfy three
+unlabelled days would be fitting to unknown truth.
+
 ## Known limitations of the current check (documented in code, not fixed)
 
 See the comment block directly above `checkMaskedTelemetryDropout()` in
