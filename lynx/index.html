@@ -722,11 +722,14 @@ const CITATIONS = {
 //         the flatline tolerance keeps a 5 W floor (see the comment at
 //         _flatTol) because removing it lost two real watt-scale detections.
 //         The polarity, balance, bleed and per-day checks ARE now invariant.
-//         VERDICTS AT NATIVE SCALE: 31->32 TROUBLESHOOT, 7->6 GOOD. The single
-//         change is a real battery flatline now caught. Four cards dropped, all
-//         intended: a 1-point noise-floor negative graded as a polarity fault,
-//         two balance cards whose floor moved with site size, and a night-load
-//         observation on a site whose own scale puts the old 4000 W bar low.
+//         VERDICTS AT NATIVE SCALE: 31->33 TROUBLESHOOT, 7->5 GOOD, over the 39
+//         of 40 real exports that parse (1 is correctly rejected as inverter-only
+//         telemetry). Two changes, both real battery flatlines now caught:
+//         Export_STE2026021200979 (flat at -7W for 9.7h) and enlighten_chart__2_
+//         (flat at 36W for 5.0h). Four cards dropped, all intended: a 1-point
+//         noise-floor negative graded as a polarity fault, two balance cards
+//         whose floor moved with site size, and a night-load observation on a
+//         site whose own scale puts the old 4000 W bar low.
 // ============================================================================
 
 // ---------- CSV parsing ----------
