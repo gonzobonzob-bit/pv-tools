@@ -781,7 +781,7 @@ const CITATIONS = {
 //         VERDICTS AT NATIVE SCALE: 31->33 TROUBLESHOOT, 7->5 GOOD, over the 39
 //         of 40 real exports that parse (1 is correctly rejected as inverter-only
 //         telemetry). Two changes, both real battery flatlines now caught:
-//         Export_STE2026021200979 (flat at -7W for 9.7h) and enlighten_chart__2_
+//         Export_site02 (flat at -7W for 9.7h) and enlighten_chart__2_
 //         (flat at 36W for 5.0h). Four cards dropped, all intended: a 1-point
 //         noise-floor negative graded as a polarity fault, two balance cards
 //         whose floor moved with site size, and a night-load observation on a
@@ -1951,7 +1951,7 @@ function classifyCtFault(points, mode) {
   // (site - solar) rather than measured by its own CT, the balance identity is
   // satisfied by construction and the residual is rounding noise — there is no
   // consumption CT for this function to reason about. Without this guard the
-  // classifier flagged Export_STE2026062302022 (ratio 1.00, r2 0.058) as a
+  // classifier flagged Export_site04 (ratio 1.00, r2 0.058) as a
   // variable mismatch on a file the rest of the tool calls GOOD: a new card
   // firing on a healthy report, which is the exact trust damage this work is
   // meant to reduce.
@@ -2083,7 +2083,7 @@ function checkBalance(points, tolerancePct=10, toleranceFloorW=null) {
  *
  * The 3 sparse-negative files are NOT a signed channel in any useful sense:
  * enlighten_chart__6_ and __7_ carry one negative reading each, and
- * Export_STE2025051200957 carries 10 across 35,041 rows (0.03%). That last one
+ * Export_site01 carries 10 across 35,041 rows (0.03%). That last one
  * is why the sparse rule below is a FRACTION, not a count.
  *
  * What DOES catch reversal is checkBalance() — but only when the sign survives.
@@ -4652,9 +4652,9 @@ function runDiagnostic(parsed) {
       // as an on-and-off pattern, but if 3 further days went unevaluated the real
       // ratio could be 4 of 10 or 7 of 10, and 7 of 10 is not intermittent.
       // Measured on the real corpus: 3 of the 6 files reaching this tier have
-      // excluded days — Export_STE2025051200957 (356 evaluated, 10 excluded),
-      // Export_STE2026021200979 (7 evaluated, 1 excluded), and
-      // Export_STE2026062302022 (2 evaluated, 1 excluded — a third of the record
+      // excluded days — Export_site01 (356 evaluated, 10 excluded),
+      // Export_site02 (7 evaluated, 1 excluded), and
+      // Export_site04 (2 evaluated, 1 excluded — a third of the record
       // vanishing from a card whose whole argument is the ratio).
       seeing:`On some days consumption scales with production the way a miswired consumption CT would, but on the other ${bleed.nDays - bleed.nFlaggedDays} ${bleed.nDays - bleed.nFlaggedDays === 1 ? 'day' : 'days'} it does not. Wiring does not come and go — a genuine CT placement fault shows on every sunny day. An on-and-off pattern fits weather-driven load instead: air conditioning on the hot days, a pool pump or EV charger on a solar-priority schedule, a heat pump. This data alone cannot separate the two. (Same reference set as the strong/moderate tier: 4 systems, 16 days — a lead worth asking about, not a settled verdict.)${coverageNote}${bleed.nExcludedDays ? ` That matters here more than on any other tier: this card's argument IS the flagged-to-evaluated ratio, and the unevaluated days could fall on either side of it.` : ''}`,
       recommendation:`<strong>Remote check:</strong> ask what large loads run on a solar-linked or daytime schedule — a pool pump, EV charger, or smart thermostat set to run on solar explains this completely and needs no action. Cross-check the flagged dates against local weather: if they were the hot days, that is the answer. <strong>If it escalates:</strong> if there is no solar-scheduled load and the flagged days do not line up with weather, re-pull a longer export — if the pattern turns out to be present on every sunny day, it moves into CT placement territory and warrants a visit.`,
@@ -5065,7 +5065,7 @@ function runDiagnostic(parsed) {
   const spanTimes = points.map(p => parseTimeSafe(p.time)).filter(Boolean);
   // Span formatting (v1.26). fmtT was MM/DD HH:MM with no year, which made the
   // corpus's largest file state something false about itself: the 35,037-point
-  // Tesla export Export_STE2025051200957_20260625_162008.csv runs
+  // Tesla export Export_site01_20260625_162008.csv runs
   // 2025-06-25 18:15 to 2026-06-25 18:15 — 365 days — and both ends formatted to
   // the identical string "06/25 18:15", so the span read "06/25 18:15 – 06/25
   // 18:15": a full year reported as a single instant. Provenance exists so the
