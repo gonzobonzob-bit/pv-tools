@@ -12,7 +12,7 @@ the safety note below before committing anything from `corpus/`.
 
     lynx/tests/
       site_review/     9 fixtures, committed, all load_with_solar   <- in git today
-      corpus/          46 real exports, staged for shared use       <- see safety note
+      corpus/          51 real exports, staged for shared use       <- see safety note
       render_harness.js
       corpus_harness.js
       cards_harness.js
@@ -52,14 +52,15 @@ with unchanged verdicts.
       m[1].split(",").forEach(x=>{x=x.trim().replace(/\s+/g," ");if(x&&!x.startsWith("@"))s.add(x);});
     console.log(s.size);'
 
-Current expected: **130** (v1.34). Was 134 while the sparkline existed, 130 before it.
+Current expected: **130** (v1.34, unchanged at v1.35). Was 134 while the sparkline existed,
+130 before it.
 
 Count functions with `function\s+(\w+)\s*\(` — a bare `function` grep also matches
 prose inside comments and produced a count that needed an asterisk.
 
 ## corpus/ — what it covers, and the safety note
 
-46 real exports across all five schema modes. The committed `site_review/` fixtures are
+51 real exports across all five schema modes. The committed `site_review/` fixtures are
 9 files, all `load_with_solar` — **66% of the tool's card types cannot be reached with
 those 9.** That gap is why a clean fixture run does not re-verify a behavioural change.
 
@@ -70,14 +71,17 @@ Notable files:
 | `enphase_confirmed.csv` | **the only confirmed ticket outcome.** Reversed consumption CT on L1, truck roll, corrected 2026-08-06 — owner-confirmed. The reversal thresholds are calibrated on it. |
 | `enlighten_chart__2_.csv` | the `[RECURRING]` battery path |
 | `GraphList_20260810151640.csv` | QCells week export: five flat stretches, four at 0 W |
+| `GraphList_20260812082235.csv`, `…082319.csv` | the only two files that exercise `checkServiceVoltage` — 80.9% / 52.1% outside ANSI Range B, 19.1V and 16.8V leg splits |
 | `Export_site05_*.csv` | three views of one system; the 61-day one is 46% empty |
 | `fault_ct_*.csv` | injected faults for the named CT classes |
 | `big200k.csv` | 200k points, performance ceiling |
 
 **SAFETY — read before committing corpus/ to a public repo.**
 
-Scanned all 46 files for names, street addresses, emails, phone numbers, coordinates
-and account identifiers: **none found.** Two things to know anyway:
+Scanned all 51 files for names, street addresses, emails, phone numbers, coordinates
+and account identifiers: **none found.** (The five `GraphList_202608120*` files added at
+v1.35 are QCells-schema exports with no site-identifier column at all; re-scanned on the
+push side before committing.) Two things to know anyway:
 
 1. **Seven files carry a gateway serial** (`STE########-#####`) in both the filename
    and a `uid` column. That is not a name or address, but it IS a unique per-site
