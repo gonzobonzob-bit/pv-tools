@@ -52,15 +52,18 @@ with unchanged verdicts.
       m[1].split(",").forEach(x=>{x=x.trim().replace(/\s+/g," ");if(x&&!x.startsWith("@"))s.add(x);});
     console.log(s.size);'
 
-Current expected: **130** (v1.34, unchanged at v1.35). Was 134 while the sparkline existed,
-130 before it.
+Current expected: **134** (v1.36). Was 130 at v1.34 and v1.35; 134 earlier, while the
+sparkline existed; 130 before it. v1.36 added four (`.first`, `.ms`, `.v1`, `.v2`) with
+the new cards — verified additive, nothing lost.
 
 Count functions with `function\s+(\w+)\s*\(` — a bare `function` grep also matches
 prose inside comments and produced a count that needed an asterisk.
 
 ## corpus/ — what it covers, and the safety note
 
-51 real exports across all five schema modes. The committed `site_review/` fixtures are
+57 real exports across all five schema modes (51 at v1.35; +5 clean `GraphList_202608121*`
+fixtures at v1.36 — see the safety note, the source-side folder holds more than this and
+the difference is deliberate). The committed `site_review/` fixtures are
 9 files, all `load_with_solar` — **66% of the tool's card types cannot be reached with
 those 9.** That gap is why a clean fixture run does not re-verify a behavioural change.
 
@@ -92,6 +95,38 @@ push side before committing.) Two things to know anyway:
 `enphase_confirmed.csv` was independently checked from the push side and carries no
 serial, name, address, account or site id — it is safe for the public repo and is the
 one file most worth committing permanently.
+
+## Open findings — carried between surfaces
+
+Things one side found that the other owns. Delete a line when it is closed, not before.
+
+**1. Standing rule 3 is not fully closed at v1.36 (analysis side owns the fix).**
+The v1.36 gates grep `needs a truck roll` and `fully remote fix`; both return 0, including
+comment lines. A wider sweep of live code still finds one capability claim:
+
+> "run the CT Health Check on the Consumption meter — **a fast, fully remote way** to rule
+> out polarity or branch issues first."
+
+That asserts both that the portal exposes a CT Health Check and that it is fully remote —
+what standing rule 3 says no export can reveal. It survived because the gate matches the
+exact phrase `fully remote fix`, not `fully remote`.
+
+Suggested gate, replacing the two exact-phrase greps:
+
+    grep -nEi 'fully remote|remotely (fix|resolv|correct)|truck roll|needs? a (site )?visit' lynx/index.html
+
+Expected: every hit is either a comment, historical calibration provenance, or inside an
+`If it escalates:` conditional — the 23 phrases kept deliberately at v1.36. Anything else
+is a live capability claim.
+
+The other seven hits at v1.36 were checked and are fine: five `truck roll` (one comment,
+one calibration provenance, three conditionals) and two `dispatch is warranted`, both
+inside `If it escalates:` blocks.
+
+**2. Two v1.36 cards have never been rendered in a browser.** Text confirmed by
+`cards_harness`, typography unseen: the info-tier minor-voltage-excursion card
+(`GraphList_20260625161445.csv`) and the cross-talk card at its new INFO tier across the
+7 affected files.
 
 ## Working agreement
 
