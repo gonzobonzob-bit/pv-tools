@@ -5368,7 +5368,22 @@ function runDiagnostic(parsed) {
          : maskedDropout && maskedDropout.kind === 'neverReported' ? ' (columns present but empty throughout — see finding)' : ''));
   }
 
-  if (svFindings.length || points.some(p => p.v1 != null || p.v2 != null)) provRan.push('ANSI C84.1 service-voltage conformance and leg imbalance');
+  // v1.35: standing rule 1 — a check that could not run must SAY so. 21 of 52
+  // corpus files carry no voltage columns at all (every tesla_derived,
+  // legs_only, whole_system and whole_system_battery export, plus 4
+  // load_with_solar). Without this branch the ANSI check was silently absent on
+  // 40% of the fleet, which is the same defect the v1.23-v1.27 audit removed
+  // from six other checks.
+  {
+    const svLegs = ['v1','v2'].filter(k => points.some(p => p[k] !== null && p[k] !== undefined));
+    if (svLegs.length === 2) {
+      provRan.push('ANSI C84.1 service-voltage conformance and leg imbalance');
+    } else if (svLegs.length === 1) {
+      provRan.push('ANSI C84.1 service-voltage conformance (range only — this export reports one leg, so the two legs cannot be compared)');
+    } else {
+      provSkipped.push('ANSI C84.1 service-voltage conformance and leg imbalance (this export carries no per-leg voltage columns)');
+    }
+  }
   if (vfFindings) provRan.push('voltage/frequency bounds' + (provVfPartial ? ` (partial coverage: ${provVfPartial})` : ''));
   else provSkipped.push('voltage/frequency (columns not in this export)');
   provRan.push('late-night load scan');
