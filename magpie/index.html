@@ -580,7 +580,7 @@
         <input type="date" id="noteDate" class="date-row">
         <div class="initials-row">
           <label for="initials">Initials</label>
-          <input type="text" id="initials" placeholder="ABC" maxlength="6" spellcheck="true">
+          <input type="text" id="initials" placeholder="ABC" maxlength="6" spellcheck="true" autocomplete="off">
         </div>
       </div>
       <div class="top-right">
@@ -761,6 +761,22 @@ const STORAGE_MODE = 'magpieNotes_mode';
 const STORAGE_CUSTOM_DEFS = 'magpieNotes_customDefs';
 const STORAGE_REMINDERS = 'magpieNotes_reminders';
 
+// The Loose Ends save holds the reminders AND the initials, so the two can't
+// diverge or be cleared independently. Older builds wrote a bare array here and
+// kept initials under STORAGE_INITIALS; both shapes still read correctly.
+function readRemindersBlob(){
+  try{
+    const raw = localStorage.getItem(STORAGE_REMINDERS);
+    if(!raw) return { reminders: [], initials: null };
+    const parsed = JSON.parse(raw);
+    if(Array.isArray(parsed)) return { reminders: parsed, initials: null }; // legacy shape
+    return {
+      reminders: Array.isArray(parsed.reminders) ? parsed.reminders : [],
+      initials: typeof parsed.initials === 'string' ? parsed.initials : null
+    };
+  }catch(e){ return { reminders: [], initials: null }; }
+}
+
 function todayISO(){
   const d = new Date();
   const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -829,17 +845,62 @@ let editingId = null;
 
 // ---- Initials ----
 const initialsInput = document.getElementById('initials');
-initialsInput.value = localStorage.getItem(STORAGE_INITIALS) || '';
+const storedInitials = readRemindersBlob().initials;
+initialsInput.value = storedInitials !== null
+  ? storedInitials
+  : (localStorage.getItem(STORAGE_INITIALS) || ''); // migrate from the old standalone key
+
+// Read-modify-write: this touches ONLY the initials field and keeps whatever
+// reminders are already stored. Writing the in-memory reminders array here
+// would let a stale tab overwrite Loose Ends saved by another tab.
+function persistInitials(){
+  const stored = readRemindersBlob();
+  localStorage.setItem(STORAGE_REMINDERS, JSON.stringify({
+    v: 2,
+    initials: initialsInput.value,
+    reminders: stored.reminders
+  }));
+  localStorage.setItem(STORAGE_INITIALS, initialsInput.value); // mirror, so an older build still sees it
+}
 initialsInput.addEventListener('input', ()=>{
-  localStorage.setItem(STORAGE_INITIALS, initialsInput.value);
+  persistInitials();
   flashSaved();
   renderOutput();
 });
+initialsInput.addEventListener('change', persistInitials);
+initialsInput.addEventListener('blur', persistInitials);
+
+// The browser restores form fields from session history AFTER our load-time
+// assignment, so it can put a stale value back over the saved one. Re-assert
+// the saved value once the page is shown (also covers back/forward cache).
+function restoreInitialsFromSave(){
+  const stored = readRemindersBlob().initials;
+  const val = stored !== null ? stored : (localStorage.getItem(STORAGE_INITIALS) || '');
+  if(initialsInput.value !== val){
+    initialsInput.value = val;
+    renderOutput();
+  }
+}
+window.addEventListener('pageshow', restoreInitialsFromSave);
 
 // ---- Date ----
 const dateInput = document.getElementById('noteDate');
+let dateManuallySet = false;
+let noteWasEmpty = true;
 dateInput.value = todayISO();
-dateInput.addEventListener('input', renderOutput);
+dateInput.addEventListener('input', ()=>{
+  dateManuallySet = true; // an explicitly chosen date is never overwritten
+  renderOutput();
+});
+function syncDateToToday(force){
+  if(dateManuallySet && !force) return;
+  const t = todayISO();
+  if(dateInput.value !== t) dateInput.value = t;
+}
+// A tab left open overnight would otherwise stamp the next note with yesterday.
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden && noteWasEmpty) syncDateToToday();
+});
 
 // ---- MPU calculator ----
 const enclosureInput = document.getElementById('enclosureRating');
@@ -1423,6 +1484,9 @@ function renderOutput(){
   const notesTrimmed = (state.notes||'').trim();
 
   const allItems = [...checkedItems, ...templateItems, ...customItems, ...(notesTrimmed ? [notesTrimmed] : [])];
+  // First content entered into an empty note starts a new message — stamp it today.
+  if(noteWasEmpty && allItems.length > 0) syncDateToToday();
+  noteWasEmpty = allItems.length === 0;
   const outputBox = document.getElementById('output');
   const banner = document.getElementById('noteBanner');
 
@@ -1491,6 +1555,8 @@ document.getElementById('clearBtn').addEventListener('click', ()=>{
     row.querySelector('select').value = '';
   });
   notesEl.value = '';
+  dateManuallySet = false; // a cleared note is a fresh message; go back to tracking today
+  syncDateToToday(true);
   renderAddons();
   renderOutput();
 });
@@ -1508,13 +1574,14 @@ const SWATCHES = [
 ];
 
 function loadReminders(){
-  try{
-    const raw = localStorage.getItem(STORAGE_REMINDERS);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
+  return readRemindersBlob().reminders;
 }
 function saveReminders(){
-  localStorage.setItem(STORAGE_REMINDERS, JSON.stringify(reminders));
+  localStorage.setItem(STORAGE_REMINDERS, JSON.stringify({
+    v: 2,
+    initials: initialsInput.value,
+    reminders
+  }));
 }
 function hexToRgba(hex, alpha){
   const h = hex.replace('#','');
