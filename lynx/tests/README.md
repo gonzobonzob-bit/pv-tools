@@ -12,10 +12,11 @@ the safety note below before committing anything from `corpus/`.
 
     lynx/tests/
       site_review/     9 fixtures, committed, all load_with_solar   <- in git today
-      corpus/          51 real exports, staged for shared use       <- see safety note
+      corpus/          68 real exports, staged for shared use       <- see safety note
       render_harness.js
       corpus_harness.js
       cards_harness.js
+      rule3_gate.js
 
 ## The harnesses — run these, don't re-describe results
 
@@ -37,6 +38,11 @@ this one reported the ReferenceError on all 4.
 
 **`cards_harness.js`** — every card headline per file. Use when card text changes.
 
+**`rule3_gate.js`** — enforces standing rule 3 by meaning rather than by exact phrase.
+Run it on every release; see finding 1 below for why the greps it replaced were not enough.
+
+    node tests/rule3_gate.js index.html
+
 ## CSS selector count — the other gate
 
 No harness applies CSS, so a stylesheet deletion is invisible to all of them. One
@@ -52,18 +58,23 @@ with unchanged verdicts.
       m[1].split(",").forEach(x=>{x=x.trim().replace(/\s+/g," ");if(x&&!x.startsWith("@"))s.add(x);});
     console.log(s.size);'
 
-Current expected: **134** (v1.36). Was 130 at v1.34 and v1.35; 134 earlier, while the
-sparkline existed; 130 before it. v1.36 added four (`.first`, `.ms`, `.v1`, `.v2`) with
-the new cards — verified additive, nothing lost.
+Current expected: **130** (v1.37, and v1.36 too — measured). Was 130 at v1.34 and v1.35;
+134 earlier, while the sparkline existed; 130 before it.
+
+This line previously read 134 and said v1.36 "added four (`.first`, `.ms`, `.v1`, `.v2`)
+— verified additive, nothing lost." That was wrong, and re-measuring both builds on the
+push side at v1.37 is what caught it: v1.36 counts 130, not 134, and none of those four
+selectors exists in its CSS. See finding 3.
 
 Count functions with `function\s+(\w+)\s*\(` — a bare `function` grep also matches
 prose inside comments and produced a count that needed an asterisk.
 
 ## corpus/ — what it covers, and the safety note
 
-57 real exports across all five schema modes (51 at v1.35; +5 clean `GraphList_202608121*`
-fixtures at v1.36 — see the safety note, the source-side folder holds more than this and
-the difference is deliberate). The committed `site_review/` fixtures are
+68 real exports across all five schema modes (51 at v1.35; +5 clean `GraphList_202608121*`
+fixtures at v1.36; +11 clean `GraphList_20260817*` QCells fixtures at v1.37 — see the
+safety note, the source-side folder holds more than this and the difference is
+deliberate). The committed `site_review/` fixtures are
 9 files, all `load_with_solar` — **66% of the tool's card types cannot be reached with
 those 9.** That gap is why a clean fixture run does not re-verify a behavioural change.
 
@@ -81,15 +92,18 @@ Notable files:
 
 **SAFETY — read before committing corpus/ to a public repo.**
 
-Scanned all 51 files for names, street addresses, emails, phone numbers, coordinates
-and account identifiers: **none found.** (The five `GraphList_202608120*` files added at
-v1.35 are QCells-schema exports with no site-identifier column at all; re-scanned on the
-push side before committing.) Two things to know anyway:
+Scanned all 68 files for names, street addresses, emails, phone numbers, coordinates
+and account identifiers: **none found.** (The `GraphList_*` files added at v1.35, v1.36
+and v1.37 are QCells-schema exports with no site-identifier column at all — their header
+is `PV, Grid, Load, PV Produced, Load Consumed, Grid Voltage L1/L2, Grid Current L1/L2,
+Grid Frequency, SOC` and nothing else; re-scanned on the push side before committing.)
+Two things to know anyway:
 
 1. **Seven files carry a gateway serial** (`STE########-#####`) in both the filename
    and a `uid` column. That is not a name or address, but it IS a unique per-site
-   identifier. Scrub or rename before committing those seven, or keep them out of git
-   and share them through this directory only.
+   identifier. They now live in `tests/_private_do_not_commit/` on the source side and
+   are committed here only as the scrubbed `Export_site01`–`site05` twins. Never copy
+   that folder across.
 2. Everything else is timestamps and watt values with no site identity attached.
 
 `enphase_confirmed.csv` was independently checked from the push side and carries no
@@ -100,33 +114,35 @@ one file most worth committing permanently.
 
 Things one side found that the other owns. Delete a line when it is closed, not before.
 
-**1. Standing rule 3 is not fully closed at v1.36 (analysis side owns the fix).**
-The v1.36 gates grep `needs a truck roll` and `fully remote fix`; both return 0, including
-comment lines. A wider sweep of live code still finds one capability claim:
+**1. CLOSED at v1.37 — kept as the reason the gate exists.** v1.36 was believed clean
+because two greps for the exact phrases `needs a truck roll` and `fully remote fix` both
+returned 0. Eight violations were sitting behind different wording ("a fast, fully remote
+way", "fully remotely"), and one asserted the INVERSE — "none of these are fixable
+remotely" — which is the same unsupported claim pointed the other way. An exact-phrase
+grep cannot enforce a rule about MEANING.
 
-> "run the CT Health Check on the Consumption meter — **a fast, fully remote way** to rule
-> out polarity or branch issues first."
+`tests/rule3_gate.js` replaces those greps and is the gate now:
 
-That asserts both that the portal exposes a CT Health Check and that it is fully remote —
-what standing rule 3 says no export can reveal. It survived because the gate matches the
-exact phrase `fully remote fix`, not `fully remote`.
+    node tests/rule3_gate.js index.html        # exit 0 = pass
 
-Suggested gate, replacing the two exact-phrase greps:
-
-    grep -nEi 'fully remote|remotely (fix|resolv|correct)|truck roll|needs? a (site )?visit' lynx/index.html
-
-Expected: every hit is either a comment, historical calibration provenance, or inside an
-`If it escalates:` conditional — the 23 phrases kept deliberately at v1.36. Anything else
-is a live capability claim.
-
-The other seven hits at v1.36 were checked and are fine: five `truck roll` (one comment,
-one calibration provenance, three conditionals) and two `dispatch is warranted`, both
-inside `If it escalates:` blocks.
+It carries two verified exemptions — `"If it is not adjustable remotely:"` (a conditional
+branch on a card that explicitly says the tool cannot tell) and `"the same evidence,
+obtained remotely"` (how evidence was obtained, not that a fix exists). Check they have
+not blinded it by running the gate against a known-bad build: v1.36 still reports its 9
+violations. Do that after any change to the exemption list.
 
 **2. Two v1.36 cards have never been rendered in a browser.** Text confirmed by
 `cards_harness`, typography unseen: the info-tier minor-voltage-excursion card
 (`GraphList_20260625161445.csv`) and the cross-talk card at its new INFO tier across the
 7 affected files.
+
+**3. `.first`, `.ms`, `.v1`, `.v2` are applied in markup but styled nowhere (analysis
+side owns it).** Found at v1.37 while reconciling the selector count above. All four
+appear as classes in card templates in BOTH v1.36 and v1.37, and none has a CSS rule in
+either — so whatever those elements were meant to look like, they are rendering
+unstyled today. Not a v1.37 regression, and not blocking: the count is 130 → 130 and no
+selector was lost. Either add the rules or drop the classes, and correct the count above
+if the answer is to add them.
 
 ## Working agreement
 
