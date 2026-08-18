@@ -63,18 +63,49 @@ Current expected: **130** (v1.37, and v1.36 too — measured). Was 130 at v1.34 
 
 This line previously read 134 and said v1.36 "added four (`.first`, `.ms`, `.v1`, `.v2`)
 — verified additive, nothing lost." That was wrong, and re-measuring both builds on the
-push side at v1.37 is what caught it: v1.36 counts 130, not 134, and none of those four
-selectors exists in its CSS. See finding 3.
+push side at v1.37 is what caught it: v1.36 counts 130, not 134. The four names were never
+selectors at all — they are JavaScript property accesses that a whole-file regex misread as
+classes. See finding 3, now closed.
 
 Count functions with `function\s+(\w+)\s*\(` — a bare `function` grep also matches
 prose inside comments and produced a count that needed an asterisk.
 
+## Element id count — state the DEFINITION, not just the number
+
+The two sides reported 46 and 48 for the same bytes. Neither was arithmetic error: they
+counted different things, and the README never said which to count. Measured on v1.38
+(identical on v1.37):
+
+| what is counted | v1.38 | command |
+|---|---|---|
+| ids in **static HTML markup** (script/style stripped) | **46** | the gate below |
+| every distinct `id=` string, incl. ids built in JS | 49 | adds `dup-notice` + 2 template patterns |
+| ids reached via `getElementById` | 44 | 5 defined ids are never looked up |
+
+The 49 includes `item-${it.uid ?? i}` and `micro-item-${i}` — template patterns, not
+literal ids — so it is the least useful figure.
+
+**Use the static-markup count, 46, and check the DELTA rather than the absolute.** A release
+must add or remove none unless it says so:
+
+    node -e '
+    const h=require("fs").readFileSync("index.html","utf8")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/g,"").replace(/<style[^>]*>[\s\S]*?<\/style>/g,"");
+    console.log(new Set([...h.matchAll(/\bid\s*=\s*"([^"]+)"/g)].map(m=>m[1])).size);'
+
+Five ids are defined but never looked up (`dispatcherLink`, `micro-dropzone-a`,
+`micro-dropzone-b`, and two template patterns). That is not a defect — they are CSS or
+markup anchors — but it is why the `getElementById` count is lower and should not be used
+as the gate.
+
 ## corpus/ — what it covers, and the safety note
 
-68 real exports across all five schema modes (51 at v1.35; +5 clean `GraphList_202608121*`
-fixtures at v1.36; +11 clean `GraphList_20260817*` QCells fixtures at v1.37 — see the
-safety note, the source-side folder holds more than this and the difference is
-deliberate). The committed `site_review/` fixtures are
+72 real exports across all five schema modes (51 at v1.35; +5 clean `GraphList_202608121*`
+fixtures at v1.36; +11 clean `GraphList_20260817*` QCells fixtures at v1.37; +4 more
+`GraphList_20260817*` at v1.38 — `103622`, `110044`, `110112`, `110201`, the batch that
+exposed the v1.37 bleed gate as the wrong instrument. `110044` is the demonstrated false
+positive that gate let through, so keep it. See the safety note; the source-side folder
+holds more than this and the difference is deliberate). The committed `site_review/` fixtures are
 9 files, all `load_with_solar` — **66% of the tool's card types cannot be reached with
 those 9.** That gap is why a clean fixture run does not re-verify a behavioural change.
 
@@ -89,6 +120,10 @@ Notable files:
 | `Export_site05_*.csv` | three views of one system; the 61-day one is 46% empty |
 | `fault_ct_*.csv` | injected faults for the named CT classes |
 | `big200k.csv` | 200k points, performance ceiling |
+| `GraphList_20260817094844.csv` | **demonstrated false positive #1** — k=0.388 with r2=0.028; the file that showed a slope alone is not evidence |
+| `GraphList_20260817110044.csv` | **demonstrated false positive #2** — passed v1.37's r2 gate (r2=0.166) but hour-of-day explains usage better (r2=0.296); the file that forced the v1.38 control |
+| `GraphList_20260723085425.csv` | the counter-example: a real bleed STRENGTHENS under the time-of-day control (r2 0.807 -> 0.844) |
+| `GraphList_20260812150345.csv` | **unresolved** — still reports at issue tier, skips the control at collinearity 0.449; would flip on a small change to `TOD_COLLIN_MAX`. No evidence either way. |
 
 **SAFETY — read before committing corpus/ to a public repo.**
 
@@ -136,13 +171,28 @@ violations. Do that after any change to the exemption list.
 (`GraphList_20260625161445.csv`) and the cross-talk card at its new INFO tier across the
 7 affected files.
 
-**3. `.first`, `.ms`, `.v1`, `.v2` are applied in markup but styled nowhere (analysis
-side owns it).** Found at v1.37 while reconciling the selector count above. All four
-appear as classes in card templates in BOTH v1.36 and v1.37, and none has a CSS rule in
-either — so whatever those elements were meant to look like, they are rendering
-unstyled today. Not a v1.37 regression, and not blocking: the count is 130 → 130 and no
-selector was lost. Either add the rules or drop the classes, and correct the count above
-if the answer is to add them.
+**3. CLOSED at v1.38 — NOT A DEFECT.** `.first`, `.ms`, `.v1`, `.v2` are not classes and
+are not applied in markup. Every occurrence is a JavaScript **property access**:
+`droppedTimeRange.first`, `x.ms`, `p.v1`, `p.v2`. Nothing renders unstyled.
+
+Measured on all three builds — v1.36 backup, v1.37 backup, and v1.38:
+
+| token | in CSS | inside a `class=` attribute | `classList`/`className` | `.token` occurrences | property accesses |
+|---|---|---|---|---|---|
+| `.first` | no | **0** | 0 | 4 | 4 |
+| `.ms` | no | **0** | 0 | 16 | 16 |
+| `.v1` | no | **0** | 0 | 3 | 3 |
+| `.v2` | no | **0** | 0 | 3 | 3 |
+
+Identical on every build. The `class=` scan covered all three quote styles including
+template literals, and `classList.add/remove/toggle` and `className` assignment as well.
+
+**The lesson, because this is the second time.** A whole-file regex cannot distinguish a
+CSS class from a property name — both look like `.token`. The same scan produced the
+`130 → 134` selector count at v1.36 that finding 3's own paragraph above walks back. When
+a scan reports selectors that "exist nowhere in the CSS," the first hypothesis should be
+that they were never selectors. Restrict the CSS scan to `<style>` blocks (the gate command
+above already does) and confirm any class claim by finding it in a `class=` attribute.
 
 ## Working agreement
 
