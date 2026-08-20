@@ -149,6 +149,24 @@
     font-family:var(--sans);
   }
   .initials-row input:focus{ outline:none; border-color:var(--orange); }
+  /* Initials are required before a note can be copied — the note carries the
+     tech's identity into a real system, and a note reading "Aug 20 : ..." with a
+     blank name is worse than no note. Flagged in place rather than only on the
+     button, so the fix is where the problem is. */
+  .initials-row input.needs-initials{
+    border-color:var(--danger);
+    background:rgba(239,91,82,0.10);
+  }
+  .initials-row input.needs-initials::placeholder{ color:var(--danger); opacity:.8; }
+  .initials-warning{
+    font-size:0.74rem;
+    color:var(--danger);
+    font-weight:600;
+    display:none;
+    align-items:center;
+    gap:5px;
+  }
+  .initials-warning.show{ display:inline-flex; }
   .top-right{
     border-left:1px solid var(--border);
     display:flex;
@@ -625,6 +643,7 @@
         <button class="btn-primary" id="copyBtn">Copy note</button>
         <button class="btn-ghost" id="clearBtn">Clear note</button>
         <span class="saved-flag" id="savedFlag">Saved</span>
+        <span class="initials-warning" id="initialsWarning">Add your initials to copy this note</span>
       </div>
       <div class="mode-toggle">
         <button class="mode-btn" id="basicBtn">Custom</button>
@@ -863,6 +882,7 @@ function persistInitials(){
   localStorage.setItem(STORAGE_INITIALS, initialsInput.value); // mirror, so an older build still sees it
 }
 initialsInput.addEventListener('input', ()=>{
+  refreshInitialsWarning();
   persistInitials();
   flashSaved();
   renderOutput();
@@ -1501,6 +1521,24 @@ function renderOutput(){
   const dateStr = formatDateShort(dateInput.value);
   const initials = initialsInput.value.trim();
   outputBox.textContent = `${dateStr} ${initials}: ${allItems.join(', ')} -- `;
+  refreshInitialsWarning();
+}
+
+// ---- Initials gate ----
+// The note is a record that goes into a real system under someone's name. With
+// the field blank the note reads "Aug 20 : replaced meter -- ", which is both
+// unattributable and hard to spot once it has been pasted. So initials are
+// REQUIRED to copy, warned about as soon as there is a note to copy rather than
+// only at the moment the copy is refused.
+function hasInitials(){ return initialsInput.value.trim().length > 0; }
+function refreshInitialsWarning(){
+  const warn = document.getElementById('initialsWarning');
+  const noteReady = document.getElementById('noteBanner').classList.contains('ready');
+  const missing = noteReady && !hasInitials();
+  warn.classList.toggle('show', missing);
+  // Only paint the field red once there is actually a note waiting on it —
+  // an empty form on first load should not open with an error state.
+  initialsInput.classList.toggle('needs-initials', missing);
 }
 
 // ---- Copy / Clear ----
@@ -1528,6 +1566,18 @@ function legacyCopy(text){
   return ok;
 }
 document.getElementById('copyBtn').addEventListener('click', ()=>{
+  // Refuse rather than copy an unattributed note. Put the cursor in the field
+  // so the fix is one keystroke away, and say what is wrong on the button too —
+  // the warning line sits left of the button and is easy to miss mid-task.
+  if(!hasInitials()){
+    refreshInitialsWarning();
+    document.getElementById('initialsWarning').classList.add('show');
+    initialsInput.classList.add('needs-initials');
+    initialsInput.scrollIntoView({ block:'center', behavior:'smooth' });
+    initialsInput.focus();
+    flashCopyResult('Initials required', true);
+    return;
+  }
   const text = document.getElementById('output').textContent;
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text)
