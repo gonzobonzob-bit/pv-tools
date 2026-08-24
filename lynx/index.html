@@ -4302,6 +4302,140 @@ function formatDroppedRange(count, range) {
   return null;
 }
 
+
+/**
+ * Per-leg reversed consumption CT — detection, naming, and resolution.
+ *
+ * CALIBRATED ON A CONFIRMED FIELD OUTCOME. This is the first check in the
+ * tool whose thresholds come from a real ticket rather than a fault injected
+ * into healthy data. Enphase site, per-leg export, 2026-08-04 to 08-10:
+ * consumption L1 was wired with reversed polarity, a truck roll corrected it
+ * on 2026-08-06 at approximately 09:00, and the site owner confirmed both the
+ * fault and the fix date.
+ *
+ * WHAT SEPARATES FAULT FROM FIXED, measured on that file per day:
+ *
+ *   day          r(L1 vs production)   negatives on L1
+ *   08-04              -0.950                45      <- fault
+ *   08-05              -0.948                29      <- fault
+ *   08-06              +0.022                 4      <- fix at ~09:00
+ *   08-07 .. 08-10   +0.08 .. +0.41           0      <- fixed
+ *
+ * A reversed consumption CT reads the production current backwards, so the
+ * leg falls as production rises (strong negative correlation) and goes
+ * NEGATIVE whenever production on that leg exceeds its real load.
+ *
+ * WHY PER DAY AND NOT WHOLE FILE. Over the whole file the same signal dilutes
+ * to r = -0.29, because 412 of 641 rows are post-fix. A whole-file statistic
+ * would have missed a confirmed fault. Windowing is what makes this work, and
+ * it is also what lets the tool say the fault STOPPED.
+ *
+ * WHY NEGATIVES ARE REQUIRED, NOT JUST ANTI-CORRELATION. Another site in the
+ * corpus shows r = -0.71 and -0.61 on two days with ZERO negative readings.
+ * That is a weaker condition — partial pickup, or simply a household that
+ * uses less when the sun is out. Anti-correlation ALONE is reported at a
+ * lower tier and explicitly not called a reversal.
+ *
+ * THRESHOLDS ARE PROVISIONAL ON ONE CONFIRMED SITE. They separate that site's
+ * fault days from its fixed days with a wide margin (-0.95 vs +0.02), but one
+ * outcome is one outcome. Do not tighten them on synthetic data.
+ */
+function checkLegReversal(points) {
+  const prod = points.map(p => {
+    const a = p.p1, b = p.p2;
+    return (a === null || a === undefined) && (b === null || b === undefined)
+      ? null : ((a || 0) + (b || 0));
+  });
+  if (!prod.some(v => v !== null && isFinite(v))) return null;
+
+  let pmax = null;
+  for (const v of prod) if (v !== null && isFinite(v) && (pmax === null || v > pmax)) pmax = v;
+  if (!pmax || pmax <= 0) return null;
+
+  const legs = [{ key: 'c1', label: 'L1(A)' }, { key: 'c2', label: 'L2(B)' }];
+  if (!legs.some(L => points.some(p => p[L.key] !== null && p[L.key] !== undefined))) return null;
+
+  const dayOf = (p) => { const t = parseTimeSafe(p.time); return t ? t.toISOString().slice(0, 10) : null; };
+  const days = [];
+  for (let i = 0; i < points.length; i++) {
+    const d = dayOf(points[i]);
+    if (!d) continue;
+    let bucket = days.find(x => x.day === d);
+    if (!bucket) { bucket = { day: d, idx: [] }; days.push(bucket); }
+    bucket.idx.push(i);
+  }
+
+  const corr = (xs, ys) => {
+    const n = xs.length;
+    if (n < 8) return null;
+    let sx = 0, sy = 0;
+    for (let i = 0; i < n; i++) { sx += xs[i]; sy += ys[i]; }
+    const mx = sx / n, my = sy / n;
+    let c = 0, vx = 0, vy = 0;
+    for (let i = 0; i < n; i++) { const a = xs[i] - mx, b = ys[i] - my; c += a * b; vx += a * a; vy += b * b; }
+    return (vx > 0 && vy > 0) ? c / Math.sqrt(vx * vy) : null;
+  };
+
+  // Calibrated on the confirmed site: fault days reach -0.95, fixed days +0.02.
+  // -0.60 sits far from both and is deliberately not tuned tighter.
+  const R_REVERSED = -0.60;
+
+  const out = [];
+  for (const L of legs) {
+    const perDay = [];
+    for (const d of days) {
+      const xs = [], ys = [];
+      let negs = 0;
+      for (const i of d.idx) {
+        const c = points[i][L.key];
+        if (c !== null && c !== undefined && isFinite(c) && c < 0) negs++;
+        const pv = prod[i];
+        if (pv === null || !isFinite(pv) || pv <= 0.05 * pmax) continue;
+        if (c === null || c === undefined || !isFinite(c)) continue;
+        xs.push(pv); ys.push(c);
+      }
+      const r = corr(xs, ys);
+      if (r === null) continue;
+      perDay.push({ day: d.day, r, n: xs.length, negs, reversed: (r <= R_REVERSED && negs > 0) });
+    }
+    if (!perDay.length) continue;
+
+    const bad = perDay.filter(x => x.reversed);
+    if (!bad.length) {
+      // Anti-correlation with no negative readings: real, but NOT a reversal.
+      const anti = perDay.filter(x => x.r <= R_REVERSED);
+      if (anti.length) {
+        out.push({ leg: L.label, kind: 'anticorrelated', days: perDay, flagged: anti,
+                   worstR: Math.min(...anti.map(x => x.r)) });
+      }
+      continue;
+    }
+
+    // Resolution: did the reversal stop and stay stopped? The confirmed site
+    // fixed mid-file, and a report that cannot say so sends a truck for a
+    // fault that is already closed.
+    // perDay is in file order; find the LAST reversed day and look at what
+    // follows. The confirmed site has 4 clean days after its fix, and a report
+    // that cannot say so sends a truck for a fault that is already closed.
+    // NOTE: the fix day itself often still carries a few negative readings
+    // from before the truck arrived (the confirmed site shows 4 on 08-06), so
+    // a day is only "still faulty" if it meets the full reversed test.
+    let lastBadIdx = -1;
+    for (let i = 0; i < perDay.length; i++) if (perDay[i].reversed) lastBadIdx = i;
+    const after = perDay.slice(lastBadIdx + 1);
+    const resolved = after.length >= 2 && after.every(x => !x.reversed);
+    const residualNegDays = after.filter(x => x.negs > 0).length;
+
+    out.push({ leg: L.label, kind: 'reversed', days: perDay, flagged: bad,
+               worstR: Math.min(...bad.map(x => x.r)),
+               totalNegs: perDay.reduce((s, x) => s + x.negs, 0),
+               firstDay: bad[0].day, lastDay: bad[bad.length - 1].day,
+               resolved, cleanDaysAfter: after.length, residualNegDays,
+               resolvedAfter: resolved ? after[0].day : null });
+  }
+  return out.length ? out : null;
+}
+
 // ---------- Orchestrator ----------
 function runDiagnostic(parsed) {
   const { mode, points, platform = 'unknown', telemetrySchema = {}, droppedRowCount = 0, droppedTimeRange = null, cumulativeRefusal = null, ignoredLegSections = null } = parsed;
@@ -9711,140 +9845,6 @@ function showError(msg) { errorBox.textContent = msg; errorBox.style.display = '
  * beside a conclusion invites reading a diagnosis out of the pixels, and at
  * this size that reading would not be supportable.
  */
-/**
- * Per-leg reversed consumption CT — detection, naming, and resolution.
- *
- * CALIBRATED ON A CONFIRMED FIELD OUTCOME. This is the first check in the
- * tool whose thresholds come from a real ticket rather than a fault injected
- * into healthy data. Enphase site, per-leg export, 2026-08-04 to 08-10:
- * consumption L1 was wired with reversed polarity, a truck roll corrected it
- * on 2026-08-06 at approximately 09:00, and the site owner confirmed both the
- * fault and the fix date.
- *
- * WHAT SEPARATES FAULT FROM FIXED, measured on that file per day:
- *
- *   day          r(L1 vs production)   negatives on L1
- *   08-04              -0.950                45      <- fault
- *   08-05              -0.948                29      <- fault
- *   08-06              +0.022                 4      <- fix at ~09:00
- *   08-07 .. 08-10   +0.08 .. +0.41           0      <- fixed
- *
- * A reversed consumption CT reads the production current backwards, so the
- * leg falls as production rises (strong negative correlation) and goes
- * NEGATIVE whenever production on that leg exceeds its real load.
- *
- * WHY PER DAY AND NOT WHOLE FILE. Over the whole file the same signal dilutes
- * to r = -0.29, because 412 of 641 rows are post-fix. A whole-file statistic
- * would have missed a confirmed fault. Windowing is what makes this work, and
- * it is also what lets the tool say the fault STOPPED.
- *
- * WHY NEGATIVES ARE REQUIRED, NOT JUST ANTI-CORRELATION. Another site in the
- * corpus shows r = -0.71 and -0.61 on two days with ZERO negative readings.
- * That is a weaker condition — partial pickup, or simply a household that
- * uses less when the sun is out. Anti-correlation ALONE is reported at a
- * lower tier and explicitly not called a reversal.
- *
- * THRESHOLDS ARE PROVISIONAL ON ONE CONFIRMED SITE. They separate that site's
- * fault days from its fixed days with a wide margin (-0.95 vs +0.02), but one
- * outcome is one outcome. Do not tighten them on synthetic data.
- */
-function checkLegReversal(points) {
-  const prod = points.map(p => {
-    const a = p.p1, b = p.p2;
-    return (a === null || a === undefined) && (b === null || b === undefined)
-      ? null : ((a || 0) + (b || 0));
-  });
-  if (!prod.some(v => v !== null && isFinite(v))) return null;
-
-  let pmax = null;
-  for (const v of prod) if (v !== null && isFinite(v) && (pmax === null || v > pmax)) pmax = v;
-  if (!pmax || pmax <= 0) return null;
-
-  const legs = [{ key: 'c1', label: 'L1(A)' }, { key: 'c2', label: 'L2(B)' }];
-  if (!legs.some(L => points.some(p => p[L.key] !== null && p[L.key] !== undefined))) return null;
-
-  const dayOf = (p) => { const t = parseTimeSafe(p.time); return t ? t.toISOString().slice(0, 10) : null; };
-  const days = [];
-  for (let i = 0; i < points.length; i++) {
-    const d = dayOf(points[i]);
-    if (!d) continue;
-    let bucket = days.find(x => x.day === d);
-    if (!bucket) { bucket = { day: d, idx: [] }; days.push(bucket); }
-    bucket.idx.push(i);
-  }
-
-  const corr = (xs, ys) => {
-    const n = xs.length;
-    if (n < 8) return null;
-    let sx = 0, sy = 0;
-    for (let i = 0; i < n; i++) { sx += xs[i]; sy += ys[i]; }
-    const mx = sx / n, my = sy / n;
-    let c = 0, vx = 0, vy = 0;
-    for (let i = 0; i < n; i++) { const a = xs[i] - mx, b = ys[i] - my; c += a * b; vx += a * a; vy += b * b; }
-    return (vx > 0 && vy > 0) ? c / Math.sqrt(vx * vy) : null;
-  };
-
-  // Calibrated on the confirmed site: fault days reach -0.95, fixed days +0.02.
-  // -0.60 sits far from both and is deliberately not tuned tighter.
-  const R_REVERSED = -0.60;
-
-  const out = [];
-  for (const L of legs) {
-    const perDay = [];
-    for (const d of days) {
-      const xs = [], ys = [];
-      let negs = 0;
-      for (const i of d.idx) {
-        const c = points[i][L.key];
-        if (c !== null && c !== undefined && isFinite(c) && c < 0) negs++;
-        const pv = prod[i];
-        if (pv === null || !isFinite(pv) || pv <= 0.05 * pmax) continue;
-        if (c === null || c === undefined || !isFinite(c)) continue;
-        xs.push(pv); ys.push(c);
-      }
-      const r = corr(xs, ys);
-      if (r === null) continue;
-      perDay.push({ day: d.day, r, n: xs.length, negs, reversed: (r <= R_REVERSED && negs > 0) });
-    }
-    if (!perDay.length) continue;
-
-    const bad = perDay.filter(x => x.reversed);
-    if (!bad.length) {
-      // Anti-correlation with no negative readings: real, but NOT a reversal.
-      const anti = perDay.filter(x => x.r <= R_REVERSED);
-      if (anti.length) {
-        out.push({ leg: L.label, kind: 'anticorrelated', days: perDay, flagged: anti,
-                   worstR: Math.min(...anti.map(x => x.r)) });
-      }
-      continue;
-    }
-
-    // Resolution: did the reversal stop and stay stopped? The confirmed site
-    // fixed mid-file, and a report that cannot say so sends a truck for a
-    // fault that is already closed.
-    // perDay is in file order; find the LAST reversed day and look at what
-    // follows. The confirmed site has 4 clean days after its fix, and a report
-    // that cannot say so sends a truck for a fault that is already closed.
-    // NOTE: the fix day itself often still carries a few negative readings
-    // from before the truck arrived (the confirmed site shows 4 on 08-06), so
-    // a day is only "still faulty" if it meets the full reversed test.
-    let lastBadIdx = -1;
-    for (let i = 0; i < perDay.length; i++) if (perDay[i].reversed) lastBadIdx = i;
-    const after = perDay.slice(lastBadIdx + 1);
-    const resolved = after.length >= 2 && after.every(x => !x.reversed);
-    const residualNegDays = after.filter(x => x.negs > 0).length;
-
-    out.push({ leg: L.label, kind: 'reversed', days: perDay, flagged: bad,
-               worstR: Math.min(...bad.map(x => x.r)),
-               totalNegs: perDay.reduce((s, x) => s + x.negs, 0),
-               firstDay: bad[0].day, lastDay: bad[bad.length - 1].day,
-               resolved, cleanDaysAfter: after.length, residualNegDays,
-               resolvedAfter: resolved ? after[0].day : null });
-  }
-  return out.length ? out : null;
-}
-
-
 function renderChart(points, mode, highlights, zoom) {
   // Visual-only zoom: renders a time slice of the SAME data — the report
   // below is deliberately untouched, so exploring the chart can never make
