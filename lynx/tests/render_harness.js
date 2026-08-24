@@ -42,8 +42,10 @@ global.document={
 };
 global.navigator={userAgent:'node'};
 global.FileReader=function(){}; global.Blob=function(){}; global.URL={createObjectURL:()=>''};
-for(const b of blocks){ try{ eval(b); }catch(e){ console.log(JSON.stringify({phase:'load',err:String(e).slice(0,140)})); } }
+let loadFailed=false;
+for(const b of blocks){ try{ eval(b); }catch(e){ loadFailed=true; console.log(JSON.stringify({phase:'load',err:String(e).slice(0,140)})); } }
 
+let crashed=false;
 for(const f of process.argv.slice(3)){
   const o={file:f.split('/').pop()};
   try{
@@ -58,5 +60,12 @@ for(const f of process.argv.slice(3)){
     o.cardsHtml=REG['detail-cards']?REG['detail-cards']._html.length:0;
     o.bannerClasses=REG['status-banner']?[...REG['status-banner'].classList._s]:null;
   }catch(ex){ o.renderCrash=String(ex).slice(0,180); }
+  if(o.renderCrash) crashed=true;
+  // Gate A, per LYNX_HANDOFF_PROTOCOL.md: renderCrash absent on every file, and
+  // cardsHtml > 0 wherever a report was produced. Validated against the full
+  // corpus before wiring this in -- 0 of 81 legitimately-rendered files carry
+  // cardsHtml===0, so this does not introduce a new false-failure mode.
+  if(o.rendered && !o.cardsHtml) { o.emptyCards=true; crashed=true; }
   console.log(JSON.stringify(o));
 }
+if(loadFailed||crashed) process.exit(1);

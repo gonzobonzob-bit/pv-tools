@@ -7,7 +7,14 @@ global.document={getElementById:()=>null,querySelector:()=>null,querySelectorAll
   createElement:()=>({style:{},classList:{add(){},remove(){}},appendChild(){},setAttribute(){}}),
   addEventListener(){},body:{appendChild(){}}};
 global.navigator={userAgent:'node'};
-for(const b of blocks){ try{ eval(b); }catch(e){} }
+// See corpus_harness.js for why only blocks 0-1 (where the diagnostic logic
+// lives) count as fatal here -- later blocks hold real page-wiring code that
+// cannot run under this harness's deliberately minimal DOM stub.
+// Plain for-loop, not .forEach -- see corpus_harness.js for why: eval() inside
+// a callback function scopes its declarations to that call, not to global.
+let loadFailed=false;
+for(let i=0;i<blocks.length;i++){ try{ eval(blocks[i]); }catch(e){ console.log(JSON.stringify({phase:'load',block:i,err:String(e).slice(0,180)})); if(i<2) loadFailed=true; } }
+let crashed=false;
 for(const f of process.argv.slice(3)){
   let o={file:f.split('/').pop()};
   const t0=Date.now();
@@ -29,6 +36,9 @@ for(const f of process.argv.slice(3)){
     o.bleed = it.some(i=>/rises|tracks production|bleed|usage reading/i.test(i.headline||''));
     o.polar = it.some(i=>/polarity/i.test(String(i.recommendation||'')));
     o.ms=Date.now()-t0;
-  }catch(e){ o.crash=String(e).slice(0,120); }
+  }catch(e){ o.crash=String(e).slice(0,120); crashed=true; }
   console.log(JSON.stringify(o));
 }
+// CI signal: o.err (a deliberate, correct rejection e.g. wrong-export-type) is not
+// a failure. Only an uncaught exception -- a real crash -- fails the job.
+if(loadFailed||crashed) process.exit(1);
