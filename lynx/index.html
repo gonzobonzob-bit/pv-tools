@@ -74,6 +74,13 @@
   .rc-btn.ghost{background:transparent; color:var(--muted); border:1px solid var(--line);}
   .rc-btn.ghost:hover{color:var(--ink); border-color:var(--muted);}
   .rc-note{color:var(--muted); font-size:11.5px;}
+  .telemetry-check{text-align:left; padding:14px 18px; margin-bottom:14px;}
+  .telemetry-check .tc-head{font-weight:700; font-size:13px; margin-bottom:4px;}
+  .telemetry-check .tc-context{color:var(--muted); font-size:12px; margin-bottom:10px;}
+  .tc-verdict{border-radius:6px; padding:8px 12px; margin-top:10px; font-size:12.5px; line-height:1.5;}
+  .tc-verdict.tc-continuation{background:var(--amber-bg); color:var(--amber); border:1px solid var(--amber-line);}
+  .tc-verdict.tc-new{background:var(--green-bg); color:var(--green); border:1px solid var(--green-line);}
+  .tc-verdict.tc-inconclusive{background:var(--card-alt); color:var(--muted); border:1px solid var(--line);}
   .examples-bar{margin:0 0 16px; text-align:center;}
   #examples-panel{text-align:left;}
   #examples-panel{background:var(--card-alt); border:none; border-radius:8px; padding:12px 14px; margin-top:8px;}
@@ -303,6 +310,20 @@
 
     <div class="section-title">Detailed Findings</div>
     <div id="detail-cards"></div>
+
+    <!-- Optional, opt-in only: shown when this report carries a [NO RAW
+         TELEMETRY] or [MASKED DROPOUT] finding, both of which already tell
+         the reader to check an earlier export from the same site. This
+         panel operationalizes that recommendation instead of leaving it as
+         a manual step. Hidden whenever no such finding is present. -->
+    <div class="upload-card telemetry-check" id="telemetry-check" style="display:none;">
+      <div class="tc-head">Check against an earlier export from this site</div>
+      <div class="tc-context" id="telemetry-check-context"></div>
+      <label class="upload-label" for="telemetry-check-file">Choose CSV</label>
+      <input type="file" id="telemetry-check-file" accept=".csv">
+      <div class="filename" id="telemetry-check-filename"></div>
+      <div id="telemetry-check-result"></div>
+    </div>
 
     <!-- v1.29 reading order: VERDICT -> WHAT TO DO -> EVIDENCE -> METHODOLOGY.
          Measured on live v1.27: a reader met a median 35 words (max 86) of
@@ -4436,6 +4457,35 @@ function checkLegReversal(points) {
   return out.length ? out : null;
 }
 
+// ---------- Cross-export telemetry persistence check (optional, UI-triggered only) ----------
+// Both [MASKED DROPOUT] and [NO RAW TELEMETRY] recommend checking an earlier
+// export from the same site to tell a NEW gap from a CONTINUING one. This
+// reuses runDiagnostic's own telemetryGap result on a second, user-supplied
+// file rather than inventing a second detector — same signature, same
+// false-positive profile already exercised against the full corpus. Never
+// called from runDiagnostic itself, so it cannot change any existing card,
+// status, or harness output — it only runs when a user opts in from the UI.
+// primaryGap/secondaryGap are runDiagnostic(...).telemetryGap results (null,
+// or a checkMaskedTelemetryDropout return value).
+function checkTelemetryPersistence(primaryGap, primaryPoints, secondaryGap, secondaryPoints) {
+  if (!primaryGap) return null;
+  const priTimes = (primaryPoints || []).map(p => parseTimeSafe(p.time)).filter(Boolean);
+  const secTimes = (secondaryPoints || []).map(p => parseTimeSafe(p.time)).filter(Boolean);
+  if (!priTimes.length || !secTimes.length) return null;
+  const priStart = priTimes.reduce((a, b) => a < b ? a : b);
+  const secEnd = secTimes.reduce((a, b) => a > b ? a : b);
+  if (secEnd > priStart) return { verdict: 'wrong-order', secondaryGap, gapDays: null };
+  const gapDays = (priStart - secEnd) / 86400000;
+  // PROVISIONAL: no corpus calibration exists for how fast a genuinely NEW
+  // gap can be told apart from a continuing one — 3 days is a judgment call,
+  // not a measured threshold. Treat anything past it as 'too-far' rather
+  // than guessing either way, same posture as the v1.41 corroboration gate's
+  // "absent verification is not a detected fault."
+  if (gapDays > 3) return { verdict: 'too-far', secondaryGap, gapDays };
+  if (!secondaryGap) return { verdict: 'new', secondaryGap, gapDays };
+  return { verdict: 'continuation', secondaryGap, gapDays };
+}
+
 // ---------- Orchestrator ----------
 function runDiagnostic(parsed) {
   const { mode, points, platform = 'unknown', telemetrySchema = {}, droppedRowCount = 0, droppedTimeRange = null, cumulativeRefusal = null, ignoredLegSections = null } = parsed;
@@ -6700,7 +6750,10 @@ const dropout = checkMaskedTelemetryDropout(points, telemetrySchema);
         })()),
     items,
     provenance,
-    highlights
+    highlights,
+    // Raw result for the optional cross-export persistence check (UI-only
+    // consumer). Additive field — nothing existing reads it.
+    telemetryGap: dropout
   };
 }
 </script>
@@ -9559,6 +9612,64 @@ let __lastParsed = null;
 let __currentChart = null;
 let __chartZoom = null;
 
+// ---------- Cross-export telemetry persistence check (UI wiring) ----------
+// See checkTelemetryPersistence() in the diagnostics block for the logic.
+// Holds the CURRENT primary file's gap + points so the file picker below
+// can be re-attached to a fresh comparison every time a new primary file
+// loads, without re-running the primary diagnostic.
+let __telemetryCheckState = null;
+
+function updateTelemetryCheckPanel(report, parsed) {
+  const panel = document.getElementById('telemetry-check');
+  if (!panel) return;
+  const gap = report.telemetryGap;
+  if (!gap) { panel.style.display = 'none'; __telemetryCheckState = null; return; }
+  __telemetryCheckState = { primaryGap: gap, primaryPoints: parsed.points };
+  document.getElementById('telemetry-check-context').textContent = gap.kind === 'neverReported'
+    ? `This file reports no raw telemetry (${gap.droppedKeys.join(', ')}) anywhere in the export. If you have an earlier export from this same site, upload it here to check whether the gap is new or already in progress.`
+    : `This file shows a masked dropout starting at ${gap.startTime}. If you have an earlier export from this same site, upload it here to check whether the gap started even earlier.`;
+  document.getElementById('telemetry-check-filename').textContent = '';
+  document.getElementById('telemetry-check-result').innerHTML = '';
+  document.getElementById('telemetry-check-file').value = '';
+  panel.style.display = 'block';
+}
+
+function renderTelemetryCheckVerdict(v) {
+  if (!v) return '<div class="tc-verdict tc-inconclusive">Not enough usable timestamps in one of the two files to compare.</div>';
+  if (v.verdict === 'wrong-order') return '<div class="tc-verdict tc-inconclusive">That file doesn\'t end before this one starts — pick the earlier export from this site to check for a continuing gap.</div>';
+  if (v.verdict === 'too-far') return `<div class="tc-verdict tc-inconclusive">That export ends ${v.gapDays.toFixed(1)} day(s) before this one starts — too far back to say whether this is the same gap.</div>`;
+  if (v.verdict === 'new') return '<div class="tc-verdict tc-new">The earlier export shows full raw telemetry — this looks like a gap that started after it, not a continuing one.</div>';
+  const kindText = v.secondaryGap.kind === 'dropout' ? 'a masked dropout' : 'no raw telemetry';
+  return `<div class="tc-verdict tc-continuation">The earlier export also shows ${kindText} — likely the same ongoing issue. Treat both exports as one ticket, not two.</div>`;
+}
+
+function handleTelemetryCheckFile(file) {
+  if (!__telemetryCheckState) return;
+  document.getElementById('telemetry-check-filename').textContent = file.name;
+  const resultEl = document.getElementById('telemetry-check-result');
+  resultEl.innerHTML = '';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const secParsed = rowsFromCSV(ev.target.result);
+      if (secParsed.error) { resultEl.innerHTML = `<div class="tc-verdict tc-inconclusive">Could not read that file: ${escHtml(secParsed.error)}</div>`; return; }
+      const secReport = runDiagnostic(secParsed);
+      const verdict = checkTelemetryPersistence(
+        __telemetryCheckState.primaryGap, __telemetryCheckState.primaryPoints,
+        secReport.telemetryGap, secParsed.points);
+      resultEl.innerHTML = renderTelemetryCheckVerdict(verdict);
+    } catch (err) {
+      resultEl.innerHTML = `<div class="tc-verdict tc-inconclusive">Could not compare against that file: ${escHtml(err.message)}</div>`;
+    }
+  };
+  reader.onerror = () => { resultEl.innerHTML = '<div class="tc-verdict tc-inconclusive">Could not read the file.</div>'; };
+  reader.readAsText(file);
+}
+
+document.getElementById('telemetry-check-file').addEventListener('change', (e) => {
+  if (e.target.files[0]) handleTelemetryCheckFile(e.target.files[0]);
+});
+
 // ---------- Exact-duplicate-file session warning ----------
 // Purely local, in-memory, per-page-load — no storage, no network. If the
 // same tech drags in the same export twice in one session (a common slip:
@@ -9620,6 +9731,7 @@ function processCSVText(text, name, isUpload=false) {
     const report = runDiagnostic(parsed);
     renderReport(report, parsed, name);
     populateRangeControls(parsed);
+    updateTelemetryCheckPanel(report, parsed);
     // Duplicate check runs after rendering (non-blocking) and never
     // affects the diagnostic output — it's a session-hygiene notice only.
     if (isUpload) {
@@ -10109,6 +10221,8 @@ function resetTool() {
   document.getElementById('filename').textContent = '';
   document.getElementById('ex-blurb').textContent = '';
   document.getElementById('range-controls').style.display = 'none';
+  document.getElementById('telemetry-check').style.display = 'none';
+  __telemetryCheckState = null;
   errorBox.style.display = 'none';
   resultsEl.style.display = 'none';
 }
