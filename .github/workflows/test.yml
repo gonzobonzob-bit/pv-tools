@@ -15,6 +15,17 @@ jobs:
         with:
           node-version: '20'
       # No install step - these tools have no dependencies.
-      # Only pw3-string-analyzer ships a test harness today. Add further tools here.
       - name: pw3-string-analyzer
         run: node pw3-string-analyzer/test.js
+      # Lynx: corpus/render/cards harnesses + rule3_gate, run against every
+      # fixture in tests/corpus/. Each exits non-zero on a real crash or
+      # capability-claim violation; parsed.error (a deliberate, correct
+      # rejection e.g. wrong-export-type) is not treated as a failure.
+      - name: lynx corpus (diagnostic logic)
+        run: node lynx/tests/corpus_harness.js lynx/index.html lynx/tests/corpus/*.csv
+      - name: lynx render (Gate A -- renderReport() actually runs, not stubbed out)
+        run: node lynx/tests/render_harness.js lynx/index.html lynx/tests/corpus/*.csv
+      - name: lynx cards (per-file finding shape)
+        run: node lynx/tests/cards_harness.js lynx/index.html lynx/tests/corpus/*.csv
+      - name: lynx rule3 gate (no capability/dispatch claims in card text)
+        run: node lynx/tests/rule3_gate.js lynx/index.html
