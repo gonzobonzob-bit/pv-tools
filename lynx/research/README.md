@@ -13,45 +13,65 @@ implemented — check `index.html` and `CLAUDE.md` for the actual current behavi
 
 - [`tesla.md`](tesla.md) — complete (install, troubleshooting, testing)
 - [`qcells.md`](qcells.md) — complete (install, troubleshooting, testing)
-- [`enphase.md`](enphase.md) — **install only.** Troubleshooting and public-testing research did not
-  finish (session token limit mid-run).
-- [`pv-curves-and-monitoring.md`](pv-curves-and-monitoring.md) — 4 of 5 angles complete (clear-sky
-  models, cloud-transient variability, production/consumption correlation, monitoring artifacts).
-  **Public real-world PV datasets** did not finish (same limit).
+- [`enphase.md`](enphase.md) — complete (install, troubleshooting, testing)
+- [`pv-curves-and-monitoring.md`](pv-curves-and-monitoring.md) — complete (clear-sky models,
+  cloud-transient variability, production/consumption correlation, monitoring artifacts, public
+  datasets)
 
-## Gaps to fill (re-run these research angles)
+No open research gaps from the original plan. Two soft, unconfirmed leads remain in `enphase.md`
+(an NREL report whose full text was network-blocked this session; whether Enphase appears on a CEC
+equipment list that was also unreachable) — noted there, not worth a dedicated re-run on their own.
 
-1. Enphase troubleshooting docs (Enlighten/Installer Toolkit alert text, field-fault taxonomy beyond
-   the two technical briefs already found).
-2. Enphase public testing/certification docs (independent UL/IEEE1547/NREL validation, if any exists).
-3. Public real-world PV production datasets (NREL PVDAQ, Sandia PV performance database, DKASC Alice
-   Springs, Open PV, etc.) as a possible calibration/validation reference.
+## Already acted on (index.html)
 
-## Concrete opportunities this research surfaced for Lynx itself
+- **v1.45:** negative-PV issue card now cites the platform-appropriate manufacturer source (Tesla,
+  Enphase, or QCells); negative-Load card gained the "second generation source" caveat QCells' FAQ
+  documents. New `CITATIONS` entries: `enphaseCtTrouble`, `enphaseCtHealth`, `qcellsFaq`,
+  `qcellsCombiner`, `teslaCtIssues`.
+- **v1.46:** replaced a built-in example whose underlying check can never escalate past info tier
+  (same-conductor leg mirroring) with one grounded in QCells' own fault code E06/A006 (service
+  voltage out of ANSI C84.1 range); added a genuine-correlation (not mirroring) bleed example on the
+  Enphase schema; every issue-tier finding now shades its window on the chart (was 104/106 before
+  the fix — see the v1.46 commit for the full list of what was missing and why).
 
-Not yet implemented — for whoever picks up the next Lynx change:
+## Remaining concrete opportunities — not yet implemented
 
-- **New `CITATIONS` entries** worth adding once cited in actual card text: the Tesla Energy Library
-  pages (CT orientation, Meter/CT Issues troubleshooting), Enphase TEB-00053/TEB-00079, the QCells
-  Q.HOME COMBINER manual and AC Installer FAQ, Sandia SAND2012-2389 (clear-sky), Lave/Kleissl 2012
-  and Kreuwel 2020 (cloud transients), Sandia SAND2004-3535 (shading/soiling physics).
-- **Tesla "Flip" / Enphase "Reverse Polarity"** — both platforms let an installer correct CT polarity
-  in *software*, independent of physical orientation. A polarity fault Lynx flags could be a
-  currently-wrong physical CT, a Flip left in the wrong state after a correct re-clamp, or a Flip
-  applied to a CT that was never backwards. Recommendation text for both platforms could mention
-  checking this software setting, not just physical orientation.
-- **Tesla power-factor check** — Tesla's own troubleshooting uses low PF (e.g. ~0.5) as a documented
-  secondary signal for a CT on the wrong phase. Lynx doesn't have an equivalent check; QCells exports
-  carry PV/Grid Voltage & Current columns that could support one for that platform too.
-  data.
-- **QCells negative-Load messaging gap:** QCells' own FAQ names "another generation source (another
-  solar system, or a generator)" as a legitimate alternate explanation for negative consumption
-  before concluding a wiring fault — Lynx's current negative-Load card doesn't mention this.
-- **QCells model-line awareness:** Q.HOME CORE H4/H5 has no CT at all; A4/A5 has exactly one. A
+- **Enphase PF-based cross-talk check.** Enphase's ANZ best-practices brief gives numeric healthy PF
+  ranges (production 0.7–1.0, consumption 0.5–0.99 when load ≥230W) and a verbatim rule: low PF on
+  multiple phases during production = cross-phase CT miswiring. Not implementable today — Enphase's
+  `legs_only` export (the only schema Lynx reads for this platform) carries no voltage/current
+  columns to compute PF from. Would need a different Enphase export format.
+- **Tesla power-factor check.** Tesla's own troubleshooting uses low PF (~0.5) as a secondary signal
+  for a CT on the wrong phase. QCells exports *do* carry Grid Voltage + Current columns that could
+  support a PF-based check on that platform; Tesla's own export has no voltage/current columns
+  either, same limitation as Enphase.
+- **Enphase Net-vs-Total consumption-mode misconfiguration.** A specific, directly-detectable
+  signature from the new research: consumption trace ≈ production trace with export always ≈0 means
+  the Consumption CT mode is set to "Load Only" when it should be "Load with Solar" (Net) — a
+  configuration error, not a wiring fault, and a different root-cause bucket than anything Lynx's
+  cross-talk/bleed check currently names.
+- **Enphase CT-configured-phase-count vs. gateway-feed mismatch.** Can itself put the gateway into
+  an error status and suppress production for every Nth microinverter on a 3-phase system — a
+  pattern signature distinct from a single dead/reversed CT.
+- **Eaton panel false-positive pattern (Enphase, but likely generalizes).** On many Eaton service
+  panels, line conductors are internally rotated across the main breaker, so a CT layout that looks
+  wrong (spanning "both entrance conductors") may be the manufacturer-documented correct
+  installation for that panel brand — worth a caveat in reversed/miswired-CT recommendation text
+  before it's called an installer error.
+- **RGM/meter-comms dropout vs. CT fault (Enphase).** "Meter Failed/Not Reporting" in Enlighten is a
+  ZigBee/USB radio link failure on a physically separate revenue-grade meter, not a CT wiring issue
+  — a distinct root cause from the flatline/dropout and negative-reading fault families Lynx already
+  models, worth keeping distinct if Lynx ever ingests Enlighten status text directly.
+- **Firmware-gated remote fix (Enphase).** The "Reverse Polarity" remote flip needs Gateway firmware
+  ≥7.x; older Envoy-S Metered hardware can't be fixed remotely at all. Lynx's recommendation text
+  already hedges ("if exposed at your access level") but doesn't name firmware version as the reason.
+- **QCells model-line awareness.** Q.HOME CORE H4/H5 has no CT at all; A4/A5 has exactly one. A
   "missing channel" isn't a dropout on those product lines — it's the expected shape. Grid-side
   metering on Q.HOME CORE is an RS-485 digital meter, not a clamp CT, so a Grid anomaly there is more
-  likely a comms/config fault than a polarity fault.
-- **Inverter clipping vs. flatline, sharper discriminator:** Kreuwel et al. describe real clipping as
+  likely a comms/config fault than a polarity fault. (Likely low-priority: Lynx reads the Q.OMMAND
+  portal's own CSV export, which may already normalize this regardless of backing hardware —
+  unconfirmed either way.)
+- **Inverter clipping vs. flatline, sharper discriminator.** Kreuwel et al. describe real clipping as
   a flat ceiling *at a fixed non-zero kW value, reached only near solar noon on high-output days* —
   distinguishable from Lynx's flatline/dropout signature (near-zero, any time of day). Worth checking
   whether `checkFlatline`'s current logic already handles this or could be sharpened.
@@ -62,5 +82,7 @@ Not yet implemented — for whoever picks up the next Lynx change:
   rain/cleaning) that's different from both Lynx's per-day production-anomaly check (discrete run of
   bad days) and a cloud transient (single-day dip) — a possible new check, if there's ever a
   multi-week+ export to test it against.
-- **QCells fault codes E21/E22/A002 and E06/A006** give citable manufacturer language for negative-PV
-  and out-of-range-voltage/current cards on that platform specifically.
+- **Real-data calibration sets exist now** (PVDAQ, DKASC, `uk_pv`, the DuraMAT tracker-fault set —
+  see `pv-curves-and-monitoring.md` §5) if Lynx ever wants to validate a threshold against real data
+  beyond its own internal corpus, or pull genuinely labeled fault windows (DKASC's dated inverter
+  failures; DuraMAT's true labeled tracker faults) to sanity-check detection logic against.

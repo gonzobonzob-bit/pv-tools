@@ -137,9 +137,50 @@ existing checks:**
   MPPs), not just a scaled-down clean curve — a stronger, more specific signature than the simple
   current/voltage rule, but only usable if Lynx ever gets sub-string or per-MPPT telemetry.
 
+## 5. Public real-world PV production datasets
+
+Four datasets are immediately downloadable today, no application process, and are **real** (not
+simulated) production data — the strongest calibration/validation candidates if Lynx ever wants
+one beyond its own internal corpus:
+
+- **[NREL PVDAQ](https://data.openei.org/submissions/4568)** — large-scale, multi-site real curve
+  shapes, ~15-min resolution (varies by system), CC-BY-4.0, pull via AWS S3 (`aws s3 ls --no-sign-request s3://oedi-data-lake/pvdaq`),
+  the `pvdaq_access` Python tool, or Athena/Glue SQL. No built-in fault labels.
+- **[DKASC Alice Springs](https://dkasolarcentre.com.au/download?location=alice-springs)** — 15+
+  years of real production data, 5-min resolution, many inverter/technology types, free under
+  Ekistica's terms up to a 5,000-cell threshold (bulk requests: email Ekistica directly). Notable:
+  its ["Notes on the Data"](https://dkasolarcentre.com.au/download/notes-on-the-data) page documents
+  specific **dated real fault/outage events** (a site-wide 22kV network outage Jan 2023; SMA
+  inverter replacements after documented "periodic loss of AC outputs, generally during the middle
+  of the day") — usable as semi-labeled validation anchors: pull the raw time series for those exact
+  windows and check whether Lynx's logic would flag them.
+- **[DuraMAT / PVPMC tracker-fault dataset](https://datahub.duramat.org/dataset/time-series-from-emulated-pv-single-axis-tracker-faults-data-and-resources)** —
+  real field hardware (a 2-string, 12-module array in Albuquerque NM) with genuinely **labeled**
+  fault intervals (tracker stall, timing-mismatch) plus baseline no-fault periods. The fault type is
+  mechanical/tracker, not CT/metering, but it's the closest thing found to true labeled-fault ground
+  truth, with a Jupyter notebook and source code included.
+- **[Open Climate Fix `uk_pv`](https://huggingface.co/datasets/openclimatefix/uk_pv)** (Hugging
+  Face, CC-BY-4.0) — 30,000+ real UK residential systems, 30-min resolution throughout, plus a
+  ~1,309-system subset at 5-min resolution. Good for population-scale normal-variance statistics.
+  GPS locations obfuscated to ~1km for privacy; needs Git LFS to pull.
+
+**Requires a licensing conversation or access request, not instant download:**
+- **PVOutput.org** — real, geographically diverse, but free-tier API is rate-limited (60 req/hr,
+  ~1 system-day per request) and **no explicit open data license was found** on PVOutput's own
+  pages — get written permission before embedding any of it in a shipped validation suite.
+- **Sandia RTC network** (rtc.sandia.gov) — 1-minute real reference-array data across 4 US climates,
+  but bulk historical access beyond the live dashboard appears to need a direct request to Sandia
+  RTC staff (the dashboard itself didn't resolve during this research pass — unconfirmed live status).
+
+**Dead ends, explicitly ruled out:** NREL's original "Open PV Project" is offline (redirects to
+LBNL's "Tracking the Sun," which is installation *metadata* only, no time series); NREL's "Solar
+Power Data for Integration Studies" is explicitly *synthetic* (simulated 2006 data); small Kaggle
+"PV fault detection" datasets are simulated/MATLAB-derived with uncertain provenance.
+
+**If Lynx ever wants real-data calibration:** PVDAQ + DKASC + `uk_pv` for normal daily-curve shape
+and cloud-transient statistics across diverse real sites; DKASC's dated-event log + the DuraMAT
+tracker-fault set as the closest available real fault ground truth to sanity-check detection logic.
+
 ## Gaps
 
-- **Public real-world PV production datasets** (NREL PVDAQ, Sandia PV performance database, DKASC
-  Alice Springs, Open PV, etc.) — this research task did not complete before hitting the session
-  limit. Worth re-running if Lynx ever wants a real dataset to validate synthetic examples or
-  calibrate thresholds against, beyond the existing internal corpus.
+None outstanding from the original research plan.
