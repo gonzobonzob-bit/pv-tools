@@ -46,9 +46,16 @@ equipment list that was also unreachable) — noted there, not worth a dedicated
   support a PF-based check on that platform; Tesla's own export has no voltage/current columns
   either, same limitation as Enphase.
 - **Enphase Net-vs-Total consumption-mode misconfiguration.** A specific, directly-detectable
-  signature from the new research: consumption trace ≈ production trace with export always ≈0 means
-  the Consumption CT mode is set to "Load Only" when it should be "Load with Solar" (Net) — a
-  configuration error, not a wiring fault, and a different root-cause bucket than anything Lynx's
+  signature from the new research: consumption trace ≈ production trace with export always ≈0 is
+  *consistent with* the Consumption CT mode being set to "Load Only" when it should be "Load with
+  Solar" (Net) — a configuration error, not a wiring fault, and a different root-cause bucket than
+  anything Lynx's cross-talk/bleed check currently names.
+  **Guardrail if this is ever built:** a CSV export never carries the portal's actual configured
+  CT mode — only the data pattern. Any card built on this must say the pattern is *consistent with*
+  a Load-Only/Load-with-Solar mismatch and name it as something to verify in the portal, never assert
+  which mode the system is actually set to. Same rule that already holds the one existing "Load Only
+  vs. Load with Solar" mention in index.html (a recommendation to check, not a claim of which one it
+  is) — don't regress it when adding a second one.
   cross-talk/bleed check currently names.
 - **Enphase CT-configured-phase-count vs. gateway-feed mismatch.** Can itself put the gateway into
   an error status and suppress production for every Nth microinverter on a 3-phase system — a
