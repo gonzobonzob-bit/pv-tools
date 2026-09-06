@@ -218,28 +218,39 @@ function buildQcellsNegGrid({ seed }) {
   return [header, ...lines].join('\n');
 }
 
-// ---------- Enphase — two consumption legs mirror each other (same conductor read twice) ----------
-function buildEnphaseLegMirror({ seed, days=3 }) {
+// ---------- QCells — service voltage outside ANSI C84.1 range ----------
+// Real-world reason, per research/qcells.md: QCells' own fault code E06/A006
+// ("RGM Meter Error: Production metering AC voltage or current value is
+// either too low or too high") plus the independent ANSI C84.1 service-
+// voltage standard already cited elsewhere in this tool (Range B for a
+// 120V-base leg is 110-127V; the issue-tier gate is >=10% of readings
+// outside that band, calibrated against two real flagged sites at 81%/52%).
+// One leg sagging hard, the other normal, keeps the fault isolated and
+// realistic (a single failing service leg or transformer tap, not a
+// sitewide event) rather than sagging both legs identically.
+function buildQcellsServiceVoltage({ seed }) {
   const rand = mulberry32(seed);
-  const randL = mulberry32(seed + 777);
-  const start = new Date(2026, 8, 2, 0, 0, 0);
-  const stepMin = 15;
-  const totalSteps = days * 24 * 60 / stepMin;
-  const walkC2 = randomWalkLoad(totalSteps, { base: 650, min: 100, max: 1800, step: 200, rand: randL });
+  const randLoad = mulberry32(seed + 999);
+  const start = new Date(2026, 6, 14, 0, 0, 0);
+  const walk = randomWalkLoad(96, { base: 550, min: 150, max: 2200, step: 220, rand: randLoad });
   const rows = [];
-  for (let i = 0; i < totalSteps; i++) {
-    const d = new Date(start.getTime() + i * stepMin * 60000);
+  for (let i = 0; i < 96; i++) {
+    const d = new Date(start.getTime() + i * 15 * 60000);
     const hour = d.getHours() + d.getMinutes()/60;
-    const prodTotal = Math.max(0, 4600 * solarShape(hour) * (0.97+0.06*rand()));
-    const p1 = prodTotal * 0.52, p2 = prodTotal * 0.48;
-    const c2 = Math.max(30, walkC2[i]);
-    // L1 is nearly a copy of L2 — the two CTs are physically clamped on the
-    // same conductor and reporting it twice, not two independent circuits.
-    const c1 = Math.max(30, c2 * (0.97 + 0.06*randL()) + (randL()-0.5)*10);
-    rows.push({ d, p1, p2, c1, c2 });
+    const pv = Math.max(0, 5200 * solarShape(hour) * (0.97+0.06*rand()));
+    const load = Math.max(50, walk[i]);
+    const grid = load - pv;
+    // L1 sags into the 98-107V band all day (below ANSI Range B's 110V
+    // floor) -- a failing service leg, not a monitoring artifact. L2 stays
+    // in the healthy 123-125V band throughout.
+    const v1 = 102.0 + (rand()-0.5)*8.0;
+    const v2 = 124.0 + (rand()-0.5)*0.6;
+    const freq = 60.0 + (rand()-0.5)*0.06;
+    const c1 = 2.0 + 2.5*rand(), c2 = 1.8 + 2.3*rand();
+    rows.push({ d, pv, grid, load, v1, v2, freq, c1, c2 });
   }
-  const header = `"DateTime","Series 5","Series 6","Produced","L2(B)","L1(A)","Consumed","L1(A)","L2(B)"`;
-  const lines = rows.map(r => `"${fmtEnphaseTime(r.d)}",,,,${r.p2},${r.p1},,${r.c1},${r.c2}`);
+  const header = `"","PV","Grid","Load","PV Produced","Load Consumed","Grid Voltage L1","Grid Voltage L2","Grid Current L1","Grid Current L2","Grid Frequency","SOC"`;
+  const lines = rows.map(r => `"${fmtQcellsTime(r.d)}","${r.pv}","${r.grid}","${r.load}","","","${r.v1}","${r.v2}","${r.c1}","${r.c2}","${r.freq}",""`);
   return [header, ...lines].join('\n');
 }
 
@@ -374,10 +385,16 @@ const EXAMPLES = [
     csv: buildQcellsNegGrid({ seed: 8 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'reads negative',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_legmirror_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
-    blurb: 'Same-conductor duplication (synthetic, 3 days). The two consumption legs, L1(A) and L2(B), are built as near-identical series — one is essentially a copy of the other with a little independent noise.',
-    why: "Real-world reason: two circuits that are supposed to be independent moving almost identically is the signature of both CTs clamped on the same conductor (or one channel bleeding into the other) — a genuine lead worth a look, which is why the tool reports it at [WORTH CHECKING] rather than escalating it to a confirmed fault on this evidence alone.",
-    csv: buildEnphaseLegMirror({ seed: 9 }), expectHeadline: 'correlate unusually strongly',
+    kind: 'bad', name: 'synthetic_bad_servicevoltage_qcells.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    blurb: "Service voltage out of range (synthetic, 1 day). Grid Voltage L1 sags into the 98-107V band all day (below ANSI C84.1's 110V floor) while L2 stays healthy at 123-125V — an isolated failing leg, not a monitoring artifact.",
+    why: "Real-world reason: QCells' own fault code E06/A006 (\"RGM Meter Error: Production metering AC voltage or current value is either too low or too high\") names this exact class, and it maps directly onto the independent ANSI C84.1 service-voltage standard this tool already checks against. A distinct fault family from every CT-wiring example above — this is a utility/service-entrance problem, not a metering one.",
+    csv: buildQcellsServiceVoltage({ seed: 11 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'ANSI C84.1',
+  },
+  {
+    kind: 'bad', name: 'synthetic_bad_bleed_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
+    blurb: "Cross-talk / bleed (synthetic, 3 days) — a genuine CORRELATION, not a duplicate copy. One consumption leg is built as its own independent baseline plus 90% of total production, so it tracks production's rises and cloud-driven dips without ever being an exact copy of another channel.",
+    why: "The same production-into-usage bleed mechanism as the QCells example, on the per-leg schema, and distinct from a same-conductor 'mirroring' fault (two channels reading identically): here the correlation comes from a shared driver (production) added onto an otherwise-independent real load, which is what a CT actually picking up the production conductor's field looks like. Expect a [TWO CHECKS AGREE] card with a bleed slope near 0.9.",
+    csv: buildEnphase({ bad: true, seed: 4 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'rises',
   },
   {
     kind: 'bad', name: 'synthetic_bad_legreversal_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
@@ -409,6 +426,12 @@ for (const ex of EXAMPLES) {
   const s = summarize(ex);
   console.log(JSON.stringify({ kind: ex.kind, name: s.name, mode: s.mode, points: s.points, status: s.status, issues: s.issues }));
   if (s.error) { console.error(`  ERROR: ${s.error}`); ok = false; continue; }
+  // Hard rule, unconditional on every example (not just ones with an explicit
+  // expectStatus): a 'good' reference must read GOOD, and a 'bad' example must
+  // NEVER read GOOD — a fault demo that shows a clean banner defeats the point
+  // of it being in the 'bad' bucket at all.
+  if (ex.kind === 'good' && s.status !== 'GOOD') { console.error(`  UNEXPECTED: 'good' example status is ${s.status}, not GOOD`); ok = false; }
+  if (ex.kind === 'bad' && s.status === 'GOOD') { console.error(`  UNEXPECTED: 'bad' example status is GOOD — this example cannot demonstrate a fault`); ok = false; }
   if (ex.kind === 'good' && s.issues.length > 0) { console.error(`  UNEXPECTED: 'good' example has an issue-tier finding`); ok = false; }
   if (ex.expectStatus && s.status !== ex.expectStatus) { console.error(`  UNEXPECTED: status ${s.status}, expected ${ex.expectStatus}`); ok = false; }
   if (ex.expectHeadline && !s.headlines.some(h => h.toLowerCase().includes(ex.expectHeadline.toLowerCase()))) {
