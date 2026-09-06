@@ -87,6 +87,32 @@ Lynx doesn't currently have an equivalent for.
   Data" (comms/firmware, power-cycle the meter) vs. "Failed to Configure Meter" (pairing failure) —
   distinct from the orientation/phase/location/assignment wiring-fault family.
 
+## Sign convention (Powerhub telemetry) — load-bearing for anything that synthesizes or validates Tesla data
+
+Confirmed 2026-09-06 against Tesla's own ["Sign Convention"](https://energylibrary.tesla.com/docs/Public/More/Powerhub/Residential/UserManual/en-us/GUID-57552F94-94B7-43FC-BC73-0F585A127126.html)
+page (Powerhub Residential User Manual), independently corroborated by third-party API
+documentation (vloschiavo/powerwall2 local-gateway docs):
+
+- **Solar:** positive = generation. Never negative under normal operation (see negative-PV above).
+- **Battery:** positive = **discharge**, negative = **charge**.
+- **Site/Grid:** positive = **net site consumption** (importing from the grid), negative = **net
+  site export**.
+- **Load:** positive = consumption.
+
+**The energy-balance identity in this convention is `Load = Solar + Site + Battery`** — every term
+contributes positively to Load when it is itself positive (solar feeds it, a grid import feeds it,
+a battery discharge feeds it). Rearranged, **`Site = Load − Solar − Battery`**.
+
+This bit a synthetic-data generator once already: an earlier version of Lynx's built-in Tesla
+"healthy" example computed `Site = Load − Solar − (−Battery)`, i.e. `Load − Solar + Battery` — the
+battery term flipped sign. Load then came out as `Solar + Site + Battery = Load ± 2×Battery`,
+silently distorting the "healthy reference" file by up to several hundred watts during any
+charge/discharge period. Caught by inspection, not by any automated check, because `checkBalance()`
+(the Grid=Load−PV reconciliation check) is gated to `mode === 'load_with_solar'` only and never runs
+on `tesla_derived` — so a sign error here has no other safety net. Fixed in `tools/make_examples.js`;
+anyone hand-building or spot-checking Tesla-shaped data should derive `Site` from `Load`, `Solar`,
+and `Battery` this way, not the other way around.
+
 ## Accuracy classes (for tolerance-band reasoning)
 
 - Tesla Remote Meter: **0.5%** accuracy, ANSI C12.1, IEC 62052-11 / 62053-21.

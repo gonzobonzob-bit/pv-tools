@@ -303,9 +303,13 @@ function buildTeslaGood({ seed, days=3 }) {
     // otherwise it's an exact repeated constant and trips the flatline check
     // (whose tolerance is a few watts, well under a bare literal 2000).
     const chargeCap = 2000 + (rand()-0.5)*80, dischargeCap = 1500 + (rand()-0.5)*60;
+    // Tesla's own Sign Convention doc (energylibrary.tesla.com, GUID-57552F94):
+    // battery +discharge/-charge, site +import/-export, solar always +generation,
+    // load always +consumption. Energy balance in that convention is
+    // Load = Solar + Site + Battery, so Site = Load - Solar - Battery.
     const batt = solar > houseLoad ? -Math.min(solar-houseLoad, chargeCap) : Math.min(houseLoad-solar, dischargeCap)*0.4;
-    const site = houseLoad - solar - (-batt);
-    const load = solar + site + batt; // "derived" — this platform computes load arithmetically
+    const site = houseLoad - solar - batt;
+    const load = solar + site + batt; // "derived" — this platform computes load arithmetically; equals houseLoad by construction
     rows.push({ d, solar, site, batt, load });
   }
   const header = `timestamp,datetime,uid,solar_instant_power,site_instant_power,battery_instant_power,load_instant_real_power`;
