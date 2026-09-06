@@ -386,61 +386,61 @@ function buildTeslaOutage({ seed, healthyDays=12, outageDays=9 }) {
 // verification you did not run").
 const EXAMPLES = [
   {
-    kind: 'good', name: 'synthetic_good_1.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    kind: 'good', mfr: 'QCells', issue: 'Healthy reference', name: 'synthetic_good_1.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
     blurb: 'Healthy reference system (synthetic, 1 day). Production follows an independent bell curve; household usage is an unrelated random-walk profile. Grid reconciles to Load − PV throughout.',
     why: 'Shows what a clean file looks like on this schema: PV and Load are generated from unrelated processes, so no cross-talk correlation should appear anywhere in the report.',
     csv: buildQcells({ bad: false, seed: 1 }), expectStatus: 'GOOD',
   },
   {
-    kind: 'good', name: 'synthetic_good_2.csv', mode: 'Enphase — legs_only (per-leg export)',
+    kind: 'good', mfr: 'Enphase', issue: 'Healthy reference', name: 'synthetic_good_2.csv', mode: 'Enphase — legs_only (per-leg export)',
     blurb: 'Healthy reference system (synthetic, 3 days). Both consumption legs and both production legs are independent random-walk / bell-curve series with no shared driver.',
     why: 'Demonstrates a clean multi-day per-leg export. A real healthy file can still surface a mild, non-issue "worth checking" lead on leg correlation — that is realistic tool behavior, not a defect in this example.',
     csv: buildEnphase({ bad: false, seed: 3 }), expectStatus: 'GOOD',
   },
   {
-    kind: 'good', name: 'synthetic_good_3.csv', mode: 'Tesla — tesla_derived (with battery)',
+    kind: 'good', mfr: 'Tesla', issue: 'Healthy reference', name: 'synthetic_good_3.csv', mode: 'Tesla — tesla_derived (with battery)',
     blurb: "Healthy reference system (synthetic, 3 days) with battery. Note: this platform's own export computes Load as Solar + Site + Battery, so it is not an independent measurement — the cross-talk check is intentionally not applicable, and the report says so explicitly.",
     why: "Shows a clean multi-day battery-equipped file on the one schema where the cross-talk check cannot run at all — a different limitation than 'not tested', and the report is expected to disclose that limitation rather than staying silent about it.",
     csv: buildTeslaGood({ seed: 5 }), expectStatus: 'GOOD',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_bleed_qcells.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    kind: 'bad', mfr: 'QCells', issue: 'Cross-talk / bleed', name: 'synthetic_bad_bleed_qcells.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
     blurb: "Cross-talk / bleed (synthetic, 1 day). The Load reading is built as household usage plus 90% of production, so it rises and falls with PV — including through the day's cloud-driven dips.",
     why: "The tool's core cross-talk signature: a consumption CT physically picking up the production conductor's field reads as usage SCALING with production, not merely sharing its rough daily shape. Expect a [TWO CHECKS AGREE] card naming a bleed slope near 0.9 W of reported usage per W produced.",
     csv: buildQcells({ bad: true, seed: 2 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'rises',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_negpv.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    kind: 'bad', mfr: 'QCells', issue: 'Negative PV (reversed CT)', name: 'synthetic_bad_negpv.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
     blurb: 'Negative production (synthetic, 1 day). PV reads negative for a stretch right after sunrise instead of the small positive values a healthy low-light period would show.',
     why: "Real-world reason: a reversed or wrongly-oriented production CT reads backward continuously, not just at night when PV is zero anyway — this simulates that by injecting negative readings during actual low-light production hours. Expect an [issue] card naming the point count and lowest reading.",
     csv: buildQcellsNegPV({ seed: 7 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'PV reads negative',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_neggrid.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    kind: 'bad', mfr: 'QCells', issue: 'Negative Grid (miswired CT)', name: 'synthetic_bad_neggrid.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
     blurb: 'Negative Grid with nothing on site to explain it (synthetic, 1 day). For a stretch of deep night, PV is silent, Load is forced to a near-zero baseline, and Grid still reads deeply negative.',
     why: 'Real-world reason: a reversed or miswired Grid/Site CT can report flow that neither production nor consumption could produce — physically impossible, and a stronger, more specific signal than an ordinary balance mismatch. Expect an [issue] card naming the point count.',
     csv: buildQcellsNegGrid({ seed: 8 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'reads negative',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_servicevoltage_qcells.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
+    kind: 'bad', mfr: 'QCells', issue: 'Service voltage out of range', name: 'synthetic_bad_servicevoltage_qcells.csv', mode: 'QCells / Q.OMMAND — load_with_solar',
     blurb: "Service voltage out of range (synthetic, 1 day). Grid Voltage L1 sags into the 98-107V band all day (below ANSI C84.1's 110V floor) while L2 stays healthy at 123-125V — an isolated failing leg, not a monitoring artifact.",
     why: "Real-world reason: QCells' own fault code E06/A006 (\"RGM Meter Error: Production metering AC voltage or current value is either too low or too high\") names this exact class, and it maps directly onto the independent ANSI C84.1 service-voltage standard this tool already checks against. A distinct fault family from every CT-wiring example above — this is a utility/service-entrance problem, not a metering one.",
     csv: buildQcellsServiceVoltage({ seed: 11 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'ANSI C84.1',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_bleed_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
+    kind: 'bad', mfr: 'Enphase', issue: 'Cross-talk / bleed', name: 'synthetic_bad_bleed_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
     blurb: "Cross-talk / bleed (synthetic, 3 days) — a genuine CORRELATION, not a duplicate copy. One consumption leg is built as its own independent baseline plus 90% of total production, so it tracks production's rises and cloud-driven dips without ever being an exact copy of another channel.",
     why: "The same production-into-usage bleed mechanism as the QCells example, on the per-leg schema, and distinct from a same-conductor 'mirroring' fault (two channels reading identically): here the correlation comes from a shared driver (production) added onto an otherwise-independent real load, which is what a CT actually picking up the production conductor's field looks like. Expect a [TWO CHECKS AGREE] card with a bleed slope near 0.9.",
     csv: buildEnphase({ bad: true, seed: 4 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'rises',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_legreversal_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
+    kind: 'bad', mfr: 'Enphase', issue: 'Reversed consumption CT', name: 'synthetic_bad_legreversal_enphase.csv', mode: 'Enphase — legs_only (per-leg export)',
     blurb: 'Reversed consumption CT on one leg (synthetic, 3 days), calibrated on the pattern from the one confirmed field outcome in this codebase: L1(A) reads a small true household load minus production, so it falls as production rises and goes negative once production exceeds that small load.',
     why: 'Real-world reason: a reversed consumption CT reads the production current backward, so the leg falls as production climbs (strong negative correlation) and goes NEGATIVE whenever production on that leg exceeds its real load — the exact signature this codebase confirmed once in the field. Expect a [REVERSED]-style issue card naming the leg.',
     csv: buildEnphaseLegReversal({ seed: 10 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'revers',
   },
   {
-    kind: 'bad', name: 'synthetic_bad_outage_tesla.csv', mode: 'Tesla — tesla_derived',
+    kind: 'bad', mfr: 'Tesla', issue: 'Multi-day production outage', name: 'synthetic_bad_outage_tesla.csv', mode: 'Tesla — tesla_derived',
     blurb: 'Multi-day production outage (synthetic): 12 normal days followed by 9 consecutive days with production collapsed to roughly 2-3% of typical, at 1-hour resolution.',
     why: "A different fault family from every example above: an equipment/dropout fault (e.g. a tripped production breaker or a failed string), not a metering artifact — and this platform's derived Load means the cross-talk checks above can't even run here (see the healthy Tesla example). The per-day production-anomaly check only fires on a RUN of several consecutive bad days; a single low day reads as ordinary weather. Expect a card naming '9 consecutive days ... far below typical'.",
     csv: buildTeslaOutage({ seed: 6 }), expectStatus: 'TROUBLESHOOT', expectHeadline: 'consecutive days',
@@ -491,7 +491,7 @@ if (process.argv.includes('--write')) {
   out += `// \`node tools/make_examples.js --write\` to regenerate.\n`;
   out += `const EXAMPLES = [\n`;
   for (const ex of EXAMPLES) {
-    out += `  { kind: ${jsStr(ex.kind)}, name: ${jsStr(ex.name)}, mode: ${jsStr(ex.mode)}, blurb: ${jsStr(ex.blurb)}, why: ${jsStr(ex.why)}, csv: ${csvTemplate(ex.csv)} },\n`;
+    out += `  { kind: ${jsStr(ex.kind)}, mfr: ${jsStr(ex.mfr)}, issue: ${jsStr(ex.issue)}, name: ${jsStr(ex.name)}, mode: ${jsStr(ex.mode)}, blurb: ${jsStr(ex.blurb)}, why: ${jsStr(ex.why)}, csv: ${csvTemplate(ex.csv)} },\n`;
   }
   out += `];\n`;
   // index.html is CRLF throughout; keep the spliced-in block consistent with
