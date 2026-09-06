@@ -113,6 +113,19 @@ on `tesla_derived` — so a sign error here has no other safety net. Fixed in `t
 anyone hand-building or spot-checking Tesla-shaped data should derive `Site` from `Load`, `Solar`,
 and `Battery` this way, not the other way around.
 
+**A second, related bug found by charting the fixed data and comparing it to a real export**
+(2026-09-06, read directly for this check, never committed or quoted — see the redaction rules
+above): an arbitrary `discharge × 0.4` cap on the battery meant the synthetic "healthy" file showed
+Site importing a small but constant, growing share of every evening's load *while the battery still
+had charge to give* — a pattern that doesn't happen on a real system, which drains the battery fully
+before touching the grid. Real-data measurement: battery power swings **-4766 to +5820 W** (full
+continuous charge/discharge rate); of real intervals with the battery discharging >200 W, only 16%
+coincide with >100 W of simultaneous grid import, and only when the load spike is large enough that
+even a hard-working battery (260-1822 W) can't keep up (852-4414 W import) — not a fixed per-sample
+ratio. Fixed by removing the arbitrary cap, using a real-data-matched 5000 W continuous rate, and
+adding an actual state-of-charge model (13.5 kWh capacity, 5% reserve floor) so the battery has
+memory across the file instead of resetting every sample.
+
 ## Accuracy classes (for tolerance-band reasoning)
 
 - Tesla Remote Meter: **0.5%** accuracy, ANSI C12.1, IEC 62052-11 / 62053-21.

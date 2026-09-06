@@ -287,27 +287,60 @@ function buildEnphaseLegReversal({ seed, days=3 }) {
 }
 
 // ---------- Tesla — tesla_derived ----------
+// Battery behavior validated against a real Tesla export (2026-09-06, read
+// directly, never committed or quoted — see research/tesla.md). Two things an
+// earlier version got wrong, both visible by eye on a real chart:
+//   1. An arbitrary "discharge only covers 40% of the deficit" cap meant the
+//      house imported a constant, growing share of every evening's load from
+//      the grid while the battery sat there under-used — real Powerwalls
+//      cover the FULL deficit first. Measured on the real file: battery power
+//      swings -4766 to +5820 W (full-rate charge/discharge), nowhere near the
+//      old +451 W-max synthetic range.
+//   2. No state of charge at all, so the battery charged/discharged forever
+//      with no memory — a real battery fills during the day and empties
+//      overnight, which is what actually produces daytime self-consumption
+//      and evening/early-morning grid import, not a fixed per-sample ratio.
+// Real-data cross-check for the fixed version: of real intervals with the
+// battery discharging >200W, only 16% coincide with >100W of grid import —
+// and only when the load spike is large enough that even a hard-working
+// battery can't keep up (260-1822W discharge alongside 852-4414W import),
+// not as a constant nightly split.
 function buildTeslaGood({ seed, days=3 }) {
   const rand = mulberry32(seed);
   const start = new Date(2026, 4, 10, 0, 0, 0); // May 10 2026 — fictional date
   const stepMin = 15;
+  const dtHours = stepMin / 60;
   const totalSteps = days*24*60/stepMin;
+  const CAPACITY_WH = 13500;   // one Powerwall
+  const RESERVE_FRAC = 0.05;   // can't discharge below 5% reserve
+  const MAX_RATE_W = 5000;     // real-data-matched continuous charge/discharge rate
+  let socWh = 0.65 * CAPACITY_WH; // start partially charged, mid-cycle
   const rows = [];
   for (let i = 0; i < totalSteps; i++) {
     const d = new Date(start.getTime() + i*stepMin*60000);
     const hour = d.getHours()+d.getMinutes()/60;
     const solar = Math.max(0, 4400*solarShape(hour)*(0.97+0.06*rand()));
     const houseLoad = 350 + 500*gauss(hour,8,1.3) + 1300*gauss(hour,19,1.9) + (rand()-0.5)*60;
-    // Jitter the charge/discharge CAP itself (not just the pre-cap value) so a
-    // multi-hour stretch pinned at the cap still varies sample-to-sample —
-    // otherwise it's an exact repeated constant and trips the flatline check
-    // (whose tolerance is a few watts, well under a bare literal 2000).
-    const chargeCap = 2000 + (rand()-0.5)*80, dischargeCap = 1500 + (rand()-0.5)*60;
     // Tesla's own Sign Convention doc (energylibrary.tesla.com, GUID-57552F94):
     // battery +discharge/-charge, site +import/-export, solar always +generation,
     // load always +consumption. Energy balance in that convention is
     // Load = Solar + Site + Battery, so Site = Load - Solar - Battery.
-    const batt = solar > houseLoad ? -Math.min(solar-houseLoad, chargeCap) : Math.min(houseLoad-solar, dischargeCap)*0.4;
+    const desired = solar - houseLoad; // + = excess to charge, - = deficit to discharge
+    let batt;
+    if (desired > 0) {
+      const headroomWh = Math.max(0, CAPACITY_WH - socWh);
+      const maxChargeW = Math.min(MAX_RATE_W, headroomWh / dtHours);
+      const chargeW = Math.min(desired, maxChargeW);
+      batt = -chargeW;
+      socWh += chargeW * dtHours;
+    } else {
+      const deficit = -desired;
+      const availableWh = Math.max(0, socWh - RESERVE_FRAC * CAPACITY_WH);
+      const maxDischargeW = Math.min(MAX_RATE_W, availableWh / dtHours);
+      const dischargeW = Math.min(deficit, maxDischargeW);
+      batt = dischargeW;
+      socWh -= dischargeW * dtHours;
+    }
     const site = houseLoad - solar - batt;
     const load = solar + site + batt; // "derived" — this platform computes load arithmetically; equals houseLoad by construction
     rows.push({ d, solar, site, batt, load });
