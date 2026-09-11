@@ -704,6 +704,25 @@
   // ---------- Spin logic ----------
   var SPIN_DURATION = 5200; // ms, must match CSS transition below
 
+  // Math.random() is reseeded identically on every page load in some
+  // privacy-hardened browsers (e.g. Brave's fingerprint farbling), which
+  // can make the first spin after each reload land on the same result.
+  // crypto.getRandomValues() can't be faked that way, so prefer it.
+  function randomInt(n){
+    if(n <= 1) return 0;
+    if(window.crypto && window.crypto.getRandomValues){
+      var range = Math.floor(0x100000000 / n) * n; // largest multiple of n <= 2^32
+      var buf = new Uint32Array(1);
+      var val;
+      do{
+        window.crypto.getRandomValues(buf);
+        val = buf[0];
+      } while(val >= range);
+      return val % n;
+    }
+    return Math.floor(Math.random()*n);
+  }
+
   function spin(){
     if(state.spinning) return;
     var n = state.items.length;
@@ -711,7 +730,7 @@
     state.spinning = true;
     els.spinBtn.disabled = true;
 
-    var winnerIndex = Math.floor(Math.random()*n);
+    var winnerIndex = randomInt(n);
     var slice = 360/n;
     var winnerMid = winnerIndex*slice + slice/2;
     var targetMod = (360 - winnerMid + 360) % 360;
