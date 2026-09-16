@@ -303,6 +303,33 @@
     outline:none;
     border-color:var(--accent1);
   }
+  .item-weight{
+    display:flex;
+    align-items:center;
+    gap:2px;
+    flex:0 0 auto;
+  }
+  .item-weight button{
+    width:22px;height:22px;
+    border-radius:6px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:13px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .item-weight button:hover{border-color:var(--accent1);}
+  .item-weight button:disabled{opacity:0.35;cursor:not-allowed;}
+  .item-weight .wlabel{
+    display:inline-block;
+    width:26px;
+    text-align:center;
+    font-size:12px;
+    font-weight:700;
+    color:var(--gold);
+    font-variant-numeric:tabular-nums;
+  }
   .row-del{
     flex:0 0 auto;
     width:30px;height:30px;
@@ -464,6 +491,7 @@
         <summary>Edit Prize Labels <span class="chev">▶</span></summary>
         <div class="section-body">
           <div class="items-list" id="itemsList"></div>
+          <div class="count-hint">Use the ×N stepper on a prize to make its slice bigger — and its odds of winning higher.</div>
           <button class="add-btn" id="addItemBtn" type="button">+ Add Prize</button>
           <button class="reset-btn" id="resetBtn" type="button">Reset to Defaults</button>
         </div>
@@ -491,8 +519,26 @@
                  "#4d908e","#577590","#277da1","#9d4edd","#f72585","#b5179e",
                  "#7209b7","#3a0ca3","#4361ee"];
 
+  // Each item is {text, weight}. weight is a win-odds multiplier: a slice's
+  // angular size (and its share of the winning roll) is weight / sum(all
+  // weights), not a flat 1/n — an ×2 prize among four ×1 prizes gets 2/5 of
+  // the wheel and 2/5 of the roll, not a hidden 1/4 behind an equal-looking
+  // slice. Keeps the wheel and the odds telling the same story.
   var DEFAULT_ITEMS = ["Grand Prize","Try Again","Bonus Spin","Small Prize",
-                        "Jackpot","Nothing","Free Pick","Big Win"];
+                        "Jackpot","Nothing","Free Pick","Big Win"].map(function(t){
+    return { text: t, weight: 1 };
+  });
+  function cloneDefaultItems(){
+    return DEFAULT_ITEMS.map(function(it){ return { text: it.text, weight: it.weight }; });
+  }
+
+  var MIN_WEIGHT = 1;
+  var MAX_WEIGHT = 20;
+  function clampWeight(n){
+    n = Math.round(n);
+    if(isNaN(n)) n = 1;
+    return Math.max(MIN_WEIGHT, Math.min(MAX_WEIGHT, n));
+  }
 
   var STORAGE_KEY = "spinToWinPicker.v1";
 
@@ -514,7 +560,7 @@
   };
 
   var state = {
-    items: DEFAULT_ITEMS.slice(),
+    items: cloneDefaultItems(),
     rotation: 0,
     spinning: false,
     muted: false
@@ -526,7 +572,11 @@
       if(!raw) return;
       var saved = JSON.parse(raw);
       if(Array.isArray(saved.items) && saved.items.length >= 1){
-        state.items = saved.items.slice(0,15);
+        // Back-compat: pre-multiplier saves stored plain strings.
+        state.items = saved.items.slice(0,15).map(function(it){
+          if(typeof it === "string") return { text: it, weight: 1 };
+          return { text: (it && typeof it.text === "string") ? it.text : "", weight: clampWeight(it && it.weight) };
+        });
       }
       if(typeof saved.muted === "boolean") state.muted = saved.muted;
     }catch(e){ /* ignore corrupt storage */ }
@@ -552,7 +602,7 @@
     var cur = state.items.length;
     if(n > cur){
       for(var i=cur; i<n; i++){
-        state.items.push("Prize " + (i+1));
+        state.items.push({ text: "Prize " + (i+1), weight: 1 });
       }
     } else if(n < cur){
       state.items = state.items.slice(0, n);
@@ -570,9 +620,17 @@
     els.addItemBtn.disabled = n >= 15;
   }
 
+  function setItemWeight(idx, w){
+    if(!state.items[idx]) return;
+    state.items[idx].weight = clampWeight(w);
+    renderItemsList();
+    renderWheel();
+    saveState();
+  }
+
   function renderItemsList(){
     els.itemsList.innerHTML = "";
-    state.items.forEach(function(text, idx){
+    state.items.forEach(function(item, idx){
       var row = document.createElement("div");
       row.className = "item-row";
 
@@ -582,20 +640,46 @@
 
       var input = document.createElement("input");
       input.type = "text";
-      input.value = text;
+      input.value = item.text;
       input.maxLength = 40;
       input.placeholder = "Prize " + (idx+1);
       input.addEventListener("input", function(){
-        state.items[idx] = input.value;
+        state.items[idx].text = input.value;
         renderWheel();
         saveState();
       });
+
+      var weightWrap = document.createElement("div");
+      weightWrap.className = "item-weight";
+      weightWrap.title = "Win-odds multiplier — a bigger number means a bigger slice and a better chance of winning";
+
+      var wMinus = document.createElement("button");
+      wMinus.type = "button";
+      wMinus.textContent = "−";
+      wMinus.setAttribute("aria-label", "Decrease multiplier");
+      wMinus.disabled = item.weight <= MIN_WEIGHT;
+      wMinus.addEventListener("click", function(){ setItemWeight(idx, item.weight - 1); });
+
+      var wLabel = document.createElement("span");
+      wLabel.className = "wlabel";
+      wLabel.textContent = "×" + item.weight;
+
+      var wPlus = document.createElement("button");
+      wPlus.type = "button";
+      wPlus.textContent = "+";
+      wPlus.setAttribute("aria-label", "Increase multiplier");
+      wPlus.disabled = item.weight >= MAX_WEIGHT;
+      wPlus.addEventListener("click", function(){ setItemWeight(idx, item.weight + 1); });
+
+      weightWrap.appendChild(wMinus);
+      weightWrap.appendChild(wLabel);
+      weightWrap.appendChild(wPlus);
 
       var del = document.createElement("button");
       del.type = "button";
       del.className = "row-del";
       del.title = "Remove this prize";
-      del.textContent = "×";
+      del.textContent = "✕";
       del.addEventListener("click", function(){
         if(state.items.length <= 1) return;
         state.items.splice(idx,1);
@@ -608,9 +692,28 @@
 
       row.appendChild(swatch);
       row.appendChild(input);
+      row.appendChild(weightWrap);
       row.appendChild(del);
       els.itemsList.appendChild(row);
     });
+  }
+
+  // Shared by renderWheel (visual wedges) and spin (winning roll) so the two
+  // can never disagree about how big a slice is.
+  function computeSliceBounds(){
+    var n = state.items.length;
+    var totalWeight = 0;
+    for(var i=0;i<n;i++) totalWeight += state.items[i].weight;
+    if(totalWeight <= 0) totalWeight = n || 1;
+    var bounds = [];
+    var cum = 0;
+    for(var j=0;j<n;j++){
+      var start = (cum/totalWeight)*360;
+      cum += state.items[j].weight;
+      var end = (cum/totalWeight)*360;
+      bounds.push({ start: start, end: end });
+    }
+    return { totalWeight: totalWeight, bounds: bounds };
   }
 
   function renderWheel(){
@@ -618,25 +721,26 @@
     els.wheel.innerHTML = "";
     if(n === 0) return;
 
-    var slice = 360 / n;
-    // Build conic-gradient using deg units directly for precision
+    var sb = computeSliceBounds();
     var parts = [];
     for(var j=0;j<n;j++){
       var c = PALETTE[j % PALETTE.length];
-      var s = (j*slice).toFixed(3) + "deg";
-      var e = ((j+1)*slice).toFixed(3) + "deg";
+      var s = sb.bounds[j].start.toFixed(3) + "deg";
+      var e = sb.bounds[j].end.toFixed(3) + "deg";
       parts.push(c + " " + s + " " + e);
     }
     els.wheel.style.background = "conic-gradient(from 0deg, " + parts.join(", ") + ")";
 
     for(var k=0;k<n;k++){
-      var mid = (k*slice) + (slice/2);
+      var mid = (sb.bounds[k].start + sb.bounds[k].end) / 2;
       var wrapperRotate = mid - 90;
       var wrap = document.createElement("div");
       wrap.className = "wheel-label";
       wrap.style.transform = "rotate(" + wrapperRotate + "deg)";
       var span = document.createElement("span");
-      span.textContent = state.items[k] || ("Prize " + (k+1));
+      var label = state.items[k].text || ("Prize " + (k+1));
+      if(state.items[k].weight > 1) label += " ×" + state.items[k].weight;
+      span.textContent = label;
       wrap.appendChild(span);
       els.wheel.appendChild(wrap);
     }
@@ -730,9 +834,14 @@
     state.spinning = true;
     els.spinBtn.disabled = true;
 
-    var winnerIndex = randomInt(n);
-    var slice = 360/n;
-    var winnerMid = winnerIndex*slice + slice/2;
+    var sb = computeSliceBounds();
+    var roll = randomInt(sb.totalWeight);
+    var winnerIndex = 0, cum = 0;
+    for(var w=0; w<n; w++){
+      cum += state.items[w].weight;
+      if(roll < cum){ winnerIndex = w; break; }
+    }
+    var winnerMid = (sb.bounds[winnerIndex].start + sb.bounds[winnerIndex].end) / 2;
     var targetMod = (360 - winnerMid + 360) % 360;
     var currentMod = ((state.rotation % 360) + 360) % 360;
     var deltaToTarget = (targetMod - currentMod + 360) % 360;
@@ -750,7 +859,7 @@
       state.spinning = false;
       els.spinBtn.disabled = false;
       winChime();
-      showWinner(state.items[winnerIndex] || ("Prize " + (winnerIndex+1)));
+      showWinner((state.items[winnerIndex] && state.items[winnerIndex].text) || ("Prize " + (winnerIndex+1)));
     }, SPIN_DURATION + 60);
   }
 
@@ -800,7 +909,7 @@
     setItemCount(state.items.length + 1);
   });
   els.resetBtn.addEventListener("click", function(){
-    state.items = DEFAULT_ITEMS.slice();
+    state.items = cloneDefaultItems();
     syncCountControls();
     renderItemsList();
     renderWheel();
