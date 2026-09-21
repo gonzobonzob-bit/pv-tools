@@ -58,8 +58,10 @@ with unchanged verdicts.
       m[1].split(",").forEach(x=>{x=x.trim().replace(/\s+/g," ");if(x&&!x.startsWith("@"))s.add(x);});
     console.log(s.size);'
 
-Current expected: **130** (v1.37, and v1.36 too — measured). Was 130 at v1.34 and v1.35;
-134 earlier, while the sparkline existed; 130 before it.
+Current expected: **139** (v1.51, measured). Was 140 at v1.50 (-1: the `.title-version`
+rule was removed when the on-page version badge was dropped in v1.51). Was 130 at v1.34
+through v1.38; this line went stale between v1.38 and v1.50 — re-measure per release
+instead of trusting the number here.
 
 This line previously read 134 and said v1.36 "added four (`.first`, `.ms`, `.v1`, `.v2`)
 — verified additive, nothing lost." That was wrong, and re-measuring both builds on the
@@ -97,6 +99,12 @@ Five ids are defined but never looked up (`dispatcherLink`, `micro-dropzone-a`,
 `micro-dropzone-b`, and two template patterns). That is not a defect — they are CSS or
 markup anchors — but it is why the `getElementById` count is lower and should not be used
 as the gate.
+
+**The 46/49/44 row above is frozen at v1.38 and has not been re-measured since — do not
+quote it as current.** The static-markup count (the actual gate) is **54** as of v1.51;
+it grew from the v1.38 figure across many releases between v1.38 and v1.50, none of which
+updated this table. Re-run the command above per release and track the delta from there,
+rather than trusting either number in this file.
 
 ## corpus/ — what it covers, and the safety note
 
