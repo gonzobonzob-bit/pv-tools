@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
+<meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0f1419">
+<title>Shade Finder</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{--bg:#0f1419;--panel:#171d25;--panel2:#1e2631;--line:#2a3441;--tx:#e6edf3;--mut:#8b98a8;--acc:#ffb703;--ok:#3ddc84;--bad:#ff5d5d}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+#app{display:grid;grid-template-columns:370px 1fr;height:100vh}
+#side{overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:12px}
+#main{display:grid;grid-template-rows:1fr auto;min-width:0;min-height:0}
+#mapwrap{position:relative;min-height:200px}
+#map{position:absolute;inset:0;background:#222}
+#status{position:absolute;z-index:1000;top:10px;left:50px;right:10px;pointer-events:none}
+#status span{display:inline-block;background:rgba(15,20,25,.9);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px}
+h1{font-size:18px;margin:0 0 2px}
+h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:16px 0 6px}
+.sub{color:var(--mut);font-size:12px;margin-bottom:8px}
+button,select,input{font:inherit;color:var(--tx)}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.active{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+button.primary{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
+button.danger{color:var(--bad)}
+input,select{background:#0f141a;border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%}
+input[type=range]{padding:0}
+input[type=checkbox]{width:auto}
+label{display:block;font-size:12px;color:var(--mut)}
+.row{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap}
+.row>*{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.grid2 .full{grid-column:1/-1}
+details.tc{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
+details.tc summary{cursor:pointer;display:flex;align-items:center;gap:8px}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btns button{flex:1;font-size:12px;padding:6px}
+.readout{background:#0f141a;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px;margin-top:8px}
+.note{font-size:12px;color:var(--mut)}
+#bottom{background:var(--panel);border-top:1px solid var(--line);height:330px;display:flex;flex-direction:column}
+#bottom.collapsed{height:40px}
+#tabs{display:flex;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line);align-items:center}
+#tabs .sp{flex:1}
+#panes{flex:1;overflow:auto;padding:10px}
+#bottom.collapsed #panes{display:none}
+canvas{max-width:100%;display:block}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{color:var(--mut);font-weight:600;font-size:12px}
+.bar{height:8px;border-radius:4px;background:var(--acc);margin-top:3px}
+.cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-width:150px}
+.card b{display:block;font-size:20px}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px #000;display:flex;align-items:center;justify-content:center}
+.pin span{transform:rotate(45deg);font-size:15px;line-height:1}
+.tl{background:rgba(15,20,25,.88);color:#fff;border:1px solid #444;font-size:12px;padding:2px 6px}
+.crosshair{cursor:crosshair!important}
+@media(max-width:850px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:auto}#side{max-height:55vh}#main{height:90vh}}
+</style>
+</head>
+<body>
+<div id="app">
+<div id="side">
+  <h1>☀ Shade Finder</h1>
+  <div class="sub">Drop a solar pin and tree pins on the satellite view, see the shadow area, then find which tree costs the most production.</div>
+
+  <h2>1 · Location</h2>
+  <div class="row"><input id="q" placeholder="Search an address…"><button id="go" style="flex:0 0 auto">Search</button></div>
+
+  <h2>2 · Pins</h2>
+  <div class="row">
+    <button id="bSolar">☀ Solar pin</button>
+    <button id="bTree">🌳 Add tree pin</button>
+  </div>
+  <div class="note">Click a button, then click the map. Drag any pin to adjust. Tree pins can be dropped repeatedly; press Esc to stop.</div>
+
+  <h2>Solar array</h2>
+  <div class="grid2">
+    <label>Width (m)<input type="number" id="aw" step="0.5"></label>
+    <label>Depth, up-slope (m)<input type="number" id="ad" step="0.5"></label>
+    <label>Height above ground (m)<input type="number" id="ah" step="0.5"></label>
+    <label>Tilt (°)<input type="number" id="at" step="1"></label>
+    <label class="full">Faces (azimuth °, 180 = south)<input type="number" id="az" step="1"></label>
+  </div>
+
+  <h2>Trees</h2>
+  <div id="trees"></div>
+  <div class="note" id="notrees">No trees yet. Use “Add tree pin”.</div>
+
+  <h2>3 · Time</h2>
+  <div class="row"><input type="date" id="date"></div>
+  <input type="range" id="time" min="0" max="1439" step="5">
+  <div class="row"><button id="play">▶ Play day</button><label style="flex:0 0 auto;align-self:center"><input type="checkbox" id="dst"> Daylight time</label></div>
+  <div class="readout" id="sunread"></div>
+  <div class="readout" id="shaderead"></div>
+  <div class="readout" id="shadowlen"></div>
+  <div class="grid2">
+    <label>UTC offset (standard)<input type="number" id="tz" step="1"></label>
+    <label>Aurora annual shading loss %<input type="number" id="aur" step="0.1" placeholder="optional"></label>
+  </div>
+
+  <h2>4 · Annual analysis</h2>
+  <div class="row">
+    <select id="acc"><option value="fast">Fast (12 days, 20 min)</option><option value="fine">Fine (24 days, 10 min)</option></select>
+  </div>
+  <div class="row"><button class="primary" id="run">Run annual analysis</button></div>
+  <div class="row"><button id="save">Export project</button><button id="load">Import project</button><button id="clear" class="danger">Clear trees</button></div>
+  <input type="file" id="file" accept=".json" style="display:none">
+
+  <h2>Limits</h2>
+  <div class="note">Clear-sky irradiance model. Trees are ellipsoid crowns (trunk ignored). Diffuse light is not reduced by shade. Single array plane, flat terrain. Great for ranking which tree matters, not a bankable energy number. Unlike the other tools in this hub, this one is <b>not offline</b> — the satellite imagery (Esri) and address search (OpenStreetMap Nominatim) load over the network, which also means the pin location / searched address is sent to those providers. Don't search on a customer's exact street address if that's a concern; drop the pin manually instead.</div>
+</div>
+
+<div id="main">
+  <div id="mapwrap"><div id="map"></div><div id="status"><span id="stat">Pan and zoom to the house, then drop the solar pin.</span></div></div>
+  <div id="bottom">
+    <div id="tabs">
+      <button data-tab="sky" class="active">Skyline &amp; sun paths</button>
+      <button data-tab="plaus">Plausible shadows</button>
+      <button data-tab="annual">Annual results</button>
+      <span class="sp"></span>
+      <button id="collapse">▾ Collapse</button>
+    </div>
+    <div id="panes">
+      <div id="p-sky"><canvas id="sky"></canvas><div class="note">Each tree is drawn as it appears from the array center. Sun paths: Dec 21 (lowest), Mar 20, Jun 21 (highest). Yellow dot = sun now. Where a path crosses a colored tree, that tree blocks the sun.</div></div>
+      <div id="p-plaus" style="display:none"></div>
+      <div id="p-annual" style="display:none"><div class="note">Run the annual analysis to see results.</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+//#MATH-START
+const D=Math.PI/180;
+const S={arr:{lat:31.7762,lng:-106.4606,w:8,d:4,h:5,tilt:20,az:180},trees:[],tz:-7,dst:true,aurora:'',nid:1};
+function toXY(ll){return{x:(ll.lng-S.arr.lng)*Math.cos(S.arr.lat*D)*111320,y:(ll.lat-S.arr.lat)*110574};}
+function toLL(x,y){return{lat:S.arr.lat+y/110574,lng:S.arr.lng+x/(111320*Math.cos(S.arr.lat*D))};}
+function sunPos(ms,lat,lng){
+  const jd=ms/86400000+2440587.5,T=(jd-2451545)/36525;
+  const L0=(280.46646+T*(36000.76983+T*0.0003032))%360;
+  const M=357.52911+T*(35999.05029-0.0001537*T);
+  const e=0.016708634-T*(0.000042037+0.0000001267*T);
+  const Mr=M*D;
+  const C=Math.sin(Mr)*(1.914602-T*(0.004817+0.000014*T))+Math.sin(2*Mr)*(0.019993-0.000101*T)+Math.sin(3*Mr)*0.000289;
+  const tl=L0+C,om=125.04-1934.136*T,lam=(tl-0.00569-0.00478*Math.sin(om*D))*D;
+  const eps0=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60;
+  const eps=(eps0+0.00256*Math.cos(om*D))*D;
+  const dec=Math.asin(Math.sin(eps)*Math.sin(lam));
+  const y=Math.tan(eps/2)**2,L0r=L0*D;
+  const eq=4/D*(y*Math.sin(2*L0r)-2*e*Math.sin(Mr)+4*e*y*Math.sin(Mr)*Math.cos(2*L0r)-.5*y*y*Math.sin(4*L0r)-1.25*e*e*Math.sin(2*Mr));
+  const utcMin=(((ms%86400000)+86400000)%86400000)/60000;
+  let tst=(utcMin+eq+4*lng)%1440;if(tst<0)tst+=1440;
+  const ha=tst/4-180,har=ha*D,lr=lat*D;
+  const cz=Math.sin(lr)*Math.sin(dec)+Math.cos(lr)*Math.cos(dec)*Math.cos(har);
+  const z=Math.acos(Math.max(-1,Math.min(1,cz)));
+  const alt=90-z/D;
+  let az;const den=Math.cos(lr)*Math.sin(z);
+  if(Math.abs(den)<1e-9)az=180;
+  else{const ac=Math.acos(Math.max(-1,Math.min(1,(Math.sin(lr)*Math.cos(z)-Math.sin(dec))/den)))/D;az=ha>0?(ac+180)%360:(540-ac)%360;}
+  return{alt,az};
+}
+function sv(alt,az){return{sx:Math.sin(az*D)*Math.cos(alt*D),sy:Math.cos(az*D)*Math.cos(alt*D),sz:Math.sin(alt*D)};}
+function airmass(alt){return 1/(Math.sin(alt*D)+0.50572*Math.pow(alt+6.07995,-1.6364));}
+function hit(px,py,pz,sx,sy,sz,g){
+  const x=(px-g.cx)/g.a,y=(py-g.cy)/g.a,z=(pz-g.cz)/g.b;
+  const dx=sx/g.a,dy=sy/g.a,dz=sz/g.b;
+  const A=dx*dx+dy*dy+dz*dz,B=x*dx+y*dy+z*dz,C=x*x+y*y+z*z-1;
+  const disc=B*B-A*C;if(disc<=0)return false;
+  return(-B+Math.sqrt(disc))/A>0;
+}
+function hMin(t){return t.known?t.best:Math.min(t.min,t.best);}
+function hMax(t){return t.known?t.best:Math.max(t.max,t.best);}
+function geom(t,H){const p=toXY(t.ll);const base=H*t.cbf;return{cx:p.x,cy:p.y,cz:(base+H)/2,a:Math.max(.3,t.r),b:Math.max(.2,(H-base)/2)};}
+function normal(){const t=S.arr.tilt*D,p=S.arr.az*D;return{x:Math.sin(p)*Math.sin(t),y:Math.cos(p)*Math.sin(t),z:Math.cos(t)};}
+function arrPt(u,v){const A=S.arr,t=A.tilt*D,p=A.az*D;const fx=Math.sin(p),fy=Math.cos(p),rx=Math.cos(p),ry=-Math.sin(p);return{x:rx*u-fx*v*Math.cos(t),y:ry*u-fy*v*Math.cos(t),z:A.h+v*Math.sin(t)};}
+function arrayPoints(nu,nv){const o=[];for(let i=0;i<nu;i++)for(let j=0;j<nv;j++)o.push(arrPt(((i+.5)/nu-.5)*S.arr.w,((j+.5)/nv-.5)*S.arr.d));return o;}
+function opFor(t,m){return(m>=10||m<=2)?t.opW:t.op;}
+function analyze(mode,cfg){
+  const A=S.arr,tr=S.trees.filter(t=>t.on),N=tr.length;
+  const pts=arrayPoints(cfg.nu,cfg.nv),n=normal();
+  const dim=[31,28,31,30,31,30,31,31,30,31,30,31];
+  const gs=tr.map(t=>geom(t,mode==='min'?hMin(t):mode==='max'?hMax(t):t.best));
+  const out={N,trees:tr,cells:[],beam:0,tot:0,loss:0,solo:new Float64Array(N),rec:new Float64Array(N)};
+  for(let i=0;i<288;i++)out.cells.push({beam:0,loss:0,solo:new Float64Array(N)});
+  const t_=new Float64Array(N);
+  for(let m=0;m<12;m++){
+    const ops=tr.map(t=>opFor(t,m));
+    for(const dd of cfg.days){
+      const wd=dim[m]/cfg.days.length;
+      for(let mn=0;mn<1440;mn+=cfg.step){
+        const ms=Date.UTC(2026,m,dd)+(mn-S.tz*60)*60000;
+        const sp=sunPos(ms,A.lat,A.lng);if(sp.alt<=1)continue;
+        const s=sv(sp.alt,sp.az),dni=1353*Math.pow(.7,Math.pow(airmass(sp.alt),.678));
+        const cosI=n.x*s.sx+n.y*s.sy+n.z*s.sz,wt=wd*cfg.step/60;
+        const beam=dni*Math.max(0,cosI),dif=.1*dni*(1+Math.cos(A.tilt*D))/2;
+        const cell=out.cells[m*24+Math.floor(mn/60)];
+        for(const p of pts){
+          out.tot+=(beam+dif)*wt;
+          if(beam<=0)continue;
+          let prod=1;
+          for(let i=0;i<N;i++){t_[i]=hit(p.x,p.y,p.z,s.sx,s.sy,s.sz,gs[i])?1-ops[i]:1;prod*=t_[i];}
+          const b=beam*wt;
+          out.beam+=b;out.loss+=b*(1-prod);cell.beam+=b;cell.loss+=b*(1-prod);
+          for(let i=0;i<N;i++){
+            const sl=b*(1-t_[i]);out.solo[i]+=sl;cell.solo[i]+=sl;
+            let pe=1;for(let j=0;j<N;j++)if(j!==i)pe*=t_[j];
+            out.rec[i]+=b*(pe-prod);
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+//#MATH-END
+
+// ---------- UI ----------
+const $=id=>document.getElementById(id);
+const COLORS=['#e6194b','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#9a6324','#469990'];
+const TYPES={
+  deciduous:{best:9,r:4,cbf:.3,op:.85,opW:.35},
+  evergreen:{best:12,r:3.5,cbf:.12,op:.95,opW:.95},
+  palm:{best:12,r:2.5,cbf:.85,op:.6,opW:.6}
+};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const byId=id=>S.trees.find(t=>t.id===id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const map=L.map('map',{maxZoom:21,zoomControl:true}).setView([S.arr.lat,S.arr.lng],19);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,attribution:'Imagery © Esri, Maxar, Earthstar Geographics'}).addTo(map);
+const dyn=L.layerGroup().addTo(map);
+let mode=null,measureId=null,playTimer=null,tab='sky',lastRes=null;
+
+function pinIcon(color,emoji){return L.divIcon({className:'',html:`<div class="pin" style="background:${color}"><span>${emoji}</span></div>`,iconSize:[30,42],iconAnchor:[15,40]});}
+const solarMarker=L.marker([S.arr.lat,S.arr.lng],{draggable:true,icon:pinIcon('#ffb703','☀'),zIndexOffset:1000}).addTo(map);
+solarMarker.bindTooltip('Solar array',{permanent:true,direction:'right',offset:[14,-18],className:'tl'});
+solarMarker.on('drag',()=>{const p=solarMarker.getLatLng();S.arr.lat=p.lat;S.arr.lng=p.lng;render();});
+solarMarker.on('dragend',()=>{render();});
+
+function setStatus(t){$('stat').textContent=t;}
+function setMode(m,id){
+  mode=(mode===m&&m!=='measure')?null:m;measureId=id||null;
+  $('bSolar').classList.toggle('active',mode==='solar');
+  $('bTree').classList.toggle('active',mode==='tree');
+  $('map').classList.toggle('crosshair',!!mode);
+  setStatus(mode==='solar'?'Click the map where the solar array is.':mode==='tree'?'Click the map to drop a tree pin at the trunk. Esc to stop.':mode==='measure'?'Set the date/time to when the imagery was taken, then click the TIP of this tree’s shadow in the photo.':'Drag pins to adjust. Scrub the time slider to move the shadows.');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMode(null);});
+$('bSolar').onclick=()=>setMode('solar');
+$('bTree').onclick=()=>setMode('tree');
+
+map.on('click',e=>{
+  if(mode==='solar'){S.arr.lat=e.latlng.lat;S.arr.lng=e.latlng.lng;solarMarker.setLatLng(e.latlng);setMode(null);render();}
+  else if(mode==='tree'){addTree(e.latlng);}
+  else if(mode==='measure'){measureHeight(e.latlng);}
+});
+
+function addTree(ll){
+  const type='deciduous',d=TYPES[type];
+  const id=S.nid++;
+  const t={id,name:'Tree '+id,type,ll:{lat:ll.lat,lng:ll.lng},best:d.best,min:d.best*.8,max:d.best*1.2,known:false,r:d.r,cbf:d.cbf,op:d.op,opW:d.opW,on:true,color:COLORS[(id-1)%COLORS.length],_open:true};
+  S.trees.push(t);buildTrees();render();
+}
+function applyType(t,type){const d=TYPES[type];t.type=type;t.best=d.best;t.min=d.best*.8;t.max=d.best*1.2;t.r=d.r;t.cbf=d.cbf;t.op=d.op;t.opW=d.opW;}
+
+function syncTree(t){
+  if(!t._m){
+    t._m=L.marker([t.ll.lat,t.ll.lng],{draggable:true,icon:pinIcon(t.color,'🌳')}).addTo(map);
+    t._m.bindTooltip(t.name,{permanent:true,direction:'right',offset:[14,-18],className:'tl'});
+    t._m.on('drag',()=>{const p=t._m.getLatLng();t.ll={lat:p.lat,lng:p.lng};render();});
+    t._c=L.circle([t.ll.lat,t.ll.lng],{radius:t.r,color:t.color,weight:2,fillOpacity:.12,interactive:false}).addTo(map);
+  }
+  t._m.setLatLng([t.ll.lat,t.ll.lng]);
+  t._c.setLatLng([t.ll.lat,t.ll.lng]);t._c.setRadius(t.r);
+  t._m.setTooltipContent(esc(t.name));
+  t._m.setOpacity(t.on?1:.35);t._c.setStyle({opacity:t.on?1:.3,fillOpacity:t.on?.12:.03});
+}
+function removeTree(t){if(t._m)map.removeLayer(t._m);if(t._c)map.removeLayer(t._c);S.trees=S.trees.filter(x=>x!==t);}
+
+function crownSamples(g,n=22,m=10){const p=[];for(let i=0;i<n;i++){const th=2*Math.PI*i/n;for(let j=0;j<=m;j++){const ph=Math.PI*j/m;p.push([g.cx+g.a*Math.sin(ph)*Math.cos(th),g.cy+g.a*Math.sin(ph)*Math.sin(th),g.cz+g.b*Math.cos(ph)]);}}return p;}
+function hull(P){
+  P=P.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[];for(const p of P){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}
+  const up=[];for(let i=P.length-1;i>=0;i--){const p=P[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p);}
+  up.pop();lo.pop();return lo.concat(up);
+}
+function shadowPoly(g,s){if(s.sz<=0.03)return null;return hull(crownSamples(g).map(p=>[p[0]-p[2]*s.sx/s.sz,p[1]-p[2]*s.sy/s.sz]));}
+
+function dateParts(){const v=$('date').value.split('-').map(Number);return{y:v[0],m:v[1]-1,d:v[2]};}
+function curTz(){return S.tz+(S.dst?1:0);}
+function curMs(){const{y,m,d}=dateParts();return Date.UTC(y,m,d)+(+$('time').value-curTz()*60)*60000;}
+function hhmm(min){const h=Math.floor(min/60),m=min%60;return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
+
+function render(){
+  dyn.clearLayers();
+  const A=S.arr,{m}=dateParts();
+  const sp=sunPos(curMs(),A.lat,A.lng),up=sp.alt>1.5,s=sv(sp.alt,sp.az);
+  $('sunread').innerHTML=`<b>${hhmm(+$('time').value)}</b> local · sun altitude <b>${sp.alt.toFixed(1)}°</b> · azimuth <b>${sp.az.toFixed(0)}°</b>`+(up?'':' · <span style="color:var(--mut)">below horizon</span>');
+
+  // array footprint
+  const cs=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>{const p=arrPt(a*A.w/2,b*A.d/2),ll=toLL(p.x,p.y);return[ll.lat,ll.lng];});
+  L.polygon(cs,{color:'#ffb703',weight:2,fillColor:'#1b3a6b',fillOpacity:.55,interactive:false}).addTo(dyn);
+
+  const on=S.trees.filter(t=>t.on);
+  // shadow cast area per tree
+  S.trees.forEach(syncTree);
+  if(up){
+    on.forEach(t=>{
+      const best=shadowPoly(geom(t,t.best),s);
+      if(best)L.polygon(best.map(p=>{const l=toLL(p[0],p[1]);return[l.lat,l.lng];}),{color:t.color,weight:1,fillColor:'#000',fillOpacity:.35*(opFor(t,m)),interactive:false}).addTo(dyn);
+      if(!t.known&&hMin(t)<hMax(t)){
+        [hMin(t),hMax(t)].forEach(H=>{const p=shadowPoly(geom(t,H),s);if(p)L.polygon(p.map(q=>{const l=toLL(q[0],q[1]);return[l.lat,l.lng];}),{color:t.color,weight:1.5,dashArray:'5 5',fill:false,interactive:false}).addTo(dyn);});
+      }
+      // trunk shadow line
+      const base=toXY(t.ll),top=geom(t,t.best),cb=t.best*t.cbf;
+      const tip=[base.x-cb*s.sx/s.sz,base.y-cb*s.sy/s.sz];
+      if(s.sz>0.03){const a=toLL(base.x,base.y),b=toLL(tip[0],tip[1]);L.polyline([[a.lat,a.lng],[b.lat,b.lng]],{color:t.color,weight:2,opacity:.7,interactive:false}).addTo(dyn);}
+    });
+  }
+  // grid sample points colored by shade
+  const pts=arrayPoints(6,4),n=normal(),cosI=n.x*s.sx+n.y*s.sy+n.z*s.sz;
+  const gs=on.map(t=>geom(t,t.best));const cnt=new Array(on.length).fill(0);let shaded=0;
+  pts.forEach(p=>{
+    let col='#ffd400';
+    if(!up||cosI<=0)col='#888';
+    else{
+      let first=-1;gs.forEach((g,i)=>{if(hit(p.x,p.y,p.z,s.sx,s.sy,s.sz,g)){cnt[i]++;if(first<0)first=i;}});
+      if(first>=0){shaded++;col=on[first].color;}
+    }
+    const l=toLL(p.x,p.y);
+    L.circleMarker([l.lat,l.lng],{radius:4,color:'#000',weight:1,fillColor:col,fillOpacity:1,interactive:false}).addTo(dyn);
+  });
+  let txt;
+  if(!up)txt='Sun is down.';
+  else if(cosI<=0)txt='Sun is behind the array plane.';
+  else{
+    const parts=on.map((t,i)=>cnt[i]?`<span style="color:${t.color}">●</span> ${esc(t.name)} ${Math.round(cnt[i]/pts.length*100)}%`:'').filter(Boolean);
+    txt=`Array shaded now: <b>${Math.round(shaded/pts.length*100)}%</b>`+(parts.length?' — '+parts.join(', '):' — fully sunlit');
+  }
+  $('shaderead').innerHTML=txt;
+  $('notrees').style.display=S.trees.length?'none':'block';
+  if(up){
+    const brg=(sp.az+180)%360;
+    const parts=on.map(t=>`<span style="color:${t.color}">●</span> ${esc(t.name)}: ${fm(t.best/Math.tan(sp.alt*D))}`);
+    $('shadowlen').innerHTML=`Tree-top shadows now point <b>${compass(brg)}</b> (${brg.toFixed(0)}°)`+(parts.length?'<br>'+parts.join('<br>'):'');
+  }else $('shadowlen').innerHTML='No cast shadows (sun is down).';
+  if(tab==='sky')drawSky(sp);
+  if(tab==='plaus')renderPlaus();
+  save();
+}
+
+// ---------- plausible shadows ----------
+const FT=3.28084;
+const fm=m=>`${(m*FT).toFixed(0)} ft (${m.toFixed(1)} m)`;
+function compass(az){return['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(az/22.5)%16];}
+function noonAlt(mm,dd){const{y}=dateParts();let best=-90;for(let mn=540;mn<=960;mn+=5){const q=sunPos(Date.UTC(y,mm,dd)+(mn-S.tz*60)*60000,S.arr.lat,S.arr.lng);if(q.alt>best)best=q.alt;}return best;}
+function plausMonths(t,brg,X,dist){
+  const set=new Set(),{y}=dateParts(),half=Math.atan2(t.r,Math.max(dist,.5))/D+5;
+  for(let m=0;m<12;m++)for(let mn=0;mn<1440;mn+=10){
+    const q=sunPos(Date.UTC(y,m,15)+(mn-S.tz*60)*60000,S.arr.lat,S.arr.lng);
+    if(q.alt>1&&q.alt<=X){let d=Math.abs(q.az-brg);if(d>180)d=360-d;if(d<=half)set.add(m);}
+  }
+  return[...set].sort((a,b)=>a-b).map(k=>MON[k]).join(', ');
+}
+function renderPlaus(){
+  const on=S.trees.filter(t=>t.on),alts=[60,45,30,25,20,15,10];
+  const noons=[['Summer noon (Jun 21)',noonAlt(5,21)],['Equinox noon (Sep 22)',noonAlt(8,22)],['Winter noon (Dec 21)',noonAlt(11,21)]];
+  const rows=[{name:'Reference 50 ft tree',color:'#8b98a8',best:50/FT,lo:50/FT,hi:50/FT,ref:true}].concat(on.map(t=>({name:t.name,color:t.color,best:t.best,lo:hMin(t),hi:hMax(t),t})));
+  const cell=(r,alt)=>{
+    const k=1/Math.tan(alt*D),a=r.best*k;
+    const sub=r.hi-r.lo>.05?`${(r.lo*k*FT).toFixed(0)}–${(r.hi*k*FT).toFixed(0)} ft`:`${a.toFixed(1)} m`;
+    return`<td><b>${(a*FT).toFixed(0)} ft</b><div class="note">${sub}</div></td>`;
+  };
+  const nm=r=>`<td><span class="dot" style="background:${r.color}"></span> ${esc(r.name)}<div class="note">${(r.best*FT).toFixed(0)} ft (${r.best.toFixed(1)} m) tall${r.hi-r.lo>.05?', est.':''}</div></td>`;
+  let h=`<div class="note" style="margin-bottom:8px">Shadow length = tree height ÷ tan(solar altitude). Tree-top shadow on flat ground. Shadows fall opposite the sun: a south sun casts them north, a low west sun casts them east. Low sun is why a 50 ft tree can throw a 100–190 ft shadow.</div>
+  <h2 style="margin-top:6px">By sun altitude</h2>
+  <table><tr><th>Tree</th>${alts.map(a=>`<th>${a}°</th>`).join('')}</tr>${rows.map(r=>`<tr>${nm(r)}${alts.map(a=>cell(r,a)).join('')}</tr>`).join('')}</table>
+  <h2>At solar noon for this location</h2>
+  <table><tr><th>Tree</th>${noons.map(n=>`<th>${n[0]}<div class="note">sun ${n[1].toFixed(0)}° high</div></th>`).join('')}</tr>${rows.map(r=>`<tr>${nm(r)}${noons.map(n=>cell(r,n[1])).join('')}</tr>`).join('')}</table>`;
+  if(on.length){
+    h+=`<h2>Can each tree plausibly reach the array?</h2><table><tr><th>Tree</th><th>Distance to array</th><th>Verdict</th></tr>`;
+    on.forEach(t=>{
+      const p=toXY(t.ll),dist=Math.hypot(p.x,p.y);
+      const toTree=(Math.atan2(p.x,p.y)/D+360)%360,rise=hMax(t)-S.arr.h;
+      let v;
+      if(dist<t.r)v='The array is inside this tree’s crown footprint.';
+      else if(rise<=0)v=`Tree top (${fm(hMax(t))}) is below the array (${fm(S.arr.h)}), so it can’t shade the array from above.`;
+      else{
+        const X=Math.atan2(rise,dist)/D,mo=plausMonths(t,toTree,X,dist);
+        v=`Its top can shade the array when the sun is at or below <b>${X.toFixed(0)}°</b>, in the direction <b>${compass(toTree)}</b> (${toTree.toFixed(0)}°). `+(mo?`The sun gets there in: <b>${mo}</b>.`:'The sun never gets that low in that direction, so this tree is not a plausible cause.');
+      }
+      h+=`<tr><td><span class="dot" style="background:${t.color}"></span> ${esc(t.name)}</td><td>${fm(dist)}</td><td>${v}</td></tr>`;
+    });
+    h+=`</table><div class="note">Uses the array center and the tallest height estimate. The crown is wider than the tip, so real shading can start slightly sooner.</div>`;
+  }else h+=`<div class="note" style="margin-top:8px">Drop tree pins to see how far each tree’s shadow can plausibly reach.</div>`;
+  $('p-plaus').innerHTML=h;
+}
+
+// ---------- tree list ----------
+function buildTrees(){
+  document.querySelectorAll('#trees details').forEach(d=>{const t=byId(+d.dataset.id);if(t)t._open=d.open;});
+  $('trees').innerHTML=S.trees.map(t=>`
+  <details class="tc" data-id="${t.id}" ${t._open?'open':''}>
+    <summary><span class="dot" style="background:${t.color}"></span><span data-nm="${t.id}">${esc(t.name)}</span><span class="note" style="margin-left:auto">${t.known?'':'~'}${t.best} m</span></summary>
+    <div class="grid2">
+      <label class="full">Name<input data-id="${t.id}" data-k="name" value="${esc(t.name)}"></label>
+      <label>Type<select data-id="${t.id}" data-k="type">${Object.keys(TYPES).map(k=>`<option ${k===t.type?'selected':''}>${k}</option>`).join('')}</select></label>
+      <label class="full"><input type="checkbox" data-id="${t.id}" data-k="on" ${t.on?'checked':''}> Include in analysis (untick to test “what if removed”)</label>
+      <label>Height best (m)<input type="number" step="0.5" data-id="${t.id}" data-k="best" value="${t.best}"></label>
+      <label class="full"><input type="checkbox" data-id="${t.id}" data-k="known" ${t.known?'checked':''}> Height is measured (no uncertainty)</label>
+      <label>Min height (m)<input type="number" step="0.5" data-id="${t.id}" data-k="min" value="${t.min.toFixed(1)}" ${t.known?'disabled':''}></label>
+      <label>Max height (m)<input type="number" step="0.5" data-id="${t.id}" data-k="max" value="${t.max.toFixed(1)}" ${t.known?'disabled':''}></label>
+      <label>Crown radius (m)<input type="number" step="0.5" data-id="${t.id}" data-k="r" value="${t.r}"></label>
+      <label>Crown base (% of height)<input type="number" step="5" data-id="${t.id}" data-k="cbfp" value="${Math.round(t.cbf*100)}"></label>
+      <label>Opacity Apr–Oct (0–1)<input type="number" step="0.05" min="0" max="1" data-id="${t.id}" data-k="op" value="${t.op}"></label>
+      <label>Opacity Nov–Mar (0–1)<input type="number" step="0.05" min="0" max="1" data-id="${t.id}" data-k="opW" value="${t.opW}"></label>
+    </div>
+    <div class="btns"><button data-act="measure" data-id="${t.id}">📏 Height from shadow</button><button data-act="zoom" data-id="${t.id}">🎯 Find</button><button class="danger" data-act="delete" data-id="${t.id}">Delete</button></div>
+  </details>`).join('');
+}
+$('trees').addEventListener('input',e=>{
+  const el=e.target,k=el.dataset.k;if(!k)return;
+  const t=byId(+el.dataset.id);if(!t)return;
+  const v=el.type==='checkbox'?el.checked:el.type==='number'?parseFloat(el.value):el.value;
+  if(el.type==='number'&&isNaN(v))return;
+  if(k==='cbfp')t.cbf=Math.min(.95,Math.max(0,v/100));
+  else if(k==='type'){applyType(t,v);buildTrees();}
+  else if(k==='known'){t.known=v;buildTrees();}
+  else if(k==='name'){t.name=v;const sp=document.querySelector(`[data-nm="${t.id}"]`);if(sp)sp.textContent=v;}
+  else t[k]=v;
+  if(k==='best'&&!t.known){if(t.min>t.best)t.min=t.best;if(t.max<t.best)t.max=t.best;}
+  render();
+});
+$('trees').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-act]');if(!b)return;
+  const t=byId(+b.dataset.id);if(!t)return;
+  const a=b.dataset.act;
+  if(a==='delete'){removeTree(t);buildTrees();render();}
+  else if(a==='zoom'){map.setView([t.ll.lat,t.ll.lng],20);}
+  else if(a==='measure'){setMode('measure',t.id);}
+});
+function measureHeight(ll){
+  const t=byId(measureId);if(!t){setMode(null);return;}
+  const sp=sunPos(curMs(),S.arr.lat,S.arr.lng);
+  const b=toXY(t.ll),p=toXY(ll),dx=p.x-b.x,dy=p.y-b.y,L_=Math.hypot(dx,dy);
+  if(sp.alt<8){alert('Sun altitude is only '+sp.alt.toFixed(1)+'° at this date/time. Set the date and time to when the imagery was captured first.');setMode(null);return;}
+  const H=L_*Math.tan(sp.alt*D);
+  const brg=(Math.atan2(dx,dy)/D+360)%360,exp=(sp.az+180)%360;
+  let diff=Math.abs(brg-exp);if(diff>180)diff=360-diff;
+  t.best=Math.round(H*10)/10;t.min=Math.round(H*.85*10)/10;t.max=Math.round(H*1.15*10)/10;t.known=false;
+  buildTrees();setMode(null);render();
+  setStatus(`${t.name}: shadow ${L_.toFixed(1)} m at sun alt ${sp.alt.toFixed(0)}° → height ≈ ${t.best} m (±15%).`+(diff>25?` Warning: shadow bearing ${brg.toFixed(0)}° vs expected ${exp.toFixed(0)}° — the imagery was probably taken at a different date/time.`:''));
+}
+
+// ---------- skyline ----------
+function drawSky(sp){
+  const cv=$('sky'),W=Math.max(400,$('p-sky').clientWidth-4),H=230,dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);
+  const padL=34,padB=22,pw=W-padL-6,ph=H-padB-6,maxAlt=80;
+  const X=az=>padL+az/360*pw,Y=al=>6+ph-(al/maxAlt)*ph;
+  c.fillStyle='#0b1118';c.fillRect(0,0,W,H);
+  c.strokeStyle='#26323f';c.fillStyle='#8b98a8';c.font='11px sans-serif';c.lineWidth=1;
+  for(let a=0;a<=80;a+=20){c.beginPath();c.moveTo(padL,Y(a));c.lineTo(W-6,Y(a));c.stroke();c.fillText(a+'°',4,Y(a)+4);}
+  [['N',0],['E',90],['S',180],['W',270],['N',360]].forEach(([l,a])=>{c.beginPath();c.moveTo(X(a),6);c.lineTo(X(a),6+ph);c.stroke();c.fillText(l,X(a)-3,H-6);});
+  const{m}=dateParts(),pz=S.arr.h;
+  S.trees.filter(t=>t.on).forEach(t=>{
+    const g=geom(t,t.best),p=toXY(t.ll);void p;
+    c.fillStyle=t.color+'99';
+    for(let az=0;az<360;az+=1){
+      let lo=null,hi=null;
+      for(let al=0;al<=maxAlt;al+=.5){const s=sv(al,az+.5);if(hit(0,0,pz,s.sx,s.sy,s.sz,g)){if(lo===null)lo=al;hi=al;}}
+      if(lo!==null)c.fillRect(X(az),Y(hi),Math.max(1,pw/360),Y(lo)-Y(hi));
+    }
+  });
+  const{y}=dateParts();
+  [[11,21,'#5aa9ff'],[2,20,'#9be37a'],[5,21,'#ffb703']].forEach(([mm,dd,col])=>{
+    c.strokeStyle=col;c.fillStyle=col;c.lineWidth=2;c.beginPath();let started=false;
+    for(let mn=0;mn<1440;mn+=10){
+      const q=sunPos(Date.UTC(y,mm,dd)+(mn-S.tz*60)*60000,S.arr.lat,S.arr.lng);
+      if(q.alt<0)continue;
+      const px=X(q.az),py=Y(Math.min(q.alt,maxAlt));
+      if(!started){c.moveTo(px,py);started=true;}else c.lineTo(px,py);
+    }
+    c.stroke();
+    if(mm===11){c.font='10px sans-serif';for(let h=7;h<=17;h++){const q=sunPos(Date.UTC(y,mm,dd)+(h*60-S.tz*60)*60000,S.arr.lat,S.arr.lng);if(q.alt>0){c.beginPath();c.arc(X(q.az),Y(q.alt),2.5,0,7);c.fill();c.fillText(h,X(q.az)-4,Y(q.alt)+13);}}}
+  });
+  if(sp&&sp.alt>0){c.fillStyle='#fff200';c.strokeStyle='#000';c.lineWidth=1.5;c.beginPath();c.arc(X(sp.az),Y(Math.min(sp.alt,maxAlt)),6,0,7);c.fill();c.stroke();}
+}
+
+// ---------- annual analysis ----------
+function pct(x){return(x*100).toFixed(1)+'%';}
+function runAnalysis(){
+  const on=S.trees.filter(t=>t.on);
+  if(!on.length){alert('Add at least one tree pin first.');return;}
+  const cfg=$('acc').value==='fine'?{days:[1,15],step:10,nu:6,nv:4}:{days:[15],step:20,nu:4,nv:3};
+  $('run').textContent='Running…';
+  setTimeout(()=>{
+    const res={min:analyze('min',cfg),best:analyze('best',cfg),max:analyze('max',cfg)};
+    lastRes=res;showResults(res);
+    $('run').textContent='Run annual analysis';
+    switchTab('annual');
+    $('bottom').classList.remove('collapsed');$('collapse').textContent='▾ Collapse';
+  },30);
+}
+function worst(res,i){
+  const mo=new Array(12).fill(0),hr=new Array(24).fill(0);
+  res.cells.forEach((c,idx)=>{mo[Math.floor(idx/24)]+=c.solo[i];hr[idx%24]+=c.solo[i];});
+  const tot=mo.reduce((a,b)=>a+b,0);if(tot<=0)return['no shading found','—'];
+  const tm=mo.map((v,k)=>[v,k]).sort((a,b)=>b[0]-a[0]).slice(0,3).filter(a=>a[0]>tot*.08).map(a=>a[1]).sort((a,b)=>a-b).map(k=>MON[k]).join(', ');
+  const th=hr.map((v,k)=>[v,k]).sort((a,b)=>b[0]-a[0]).slice(0,2).sort((a,b)=>a[1]-b[1]).map(a=>a[1]+':00–'+(a[1]+1)+':00').join(' & ');
+  return[tm,th];
+}
+function showResults(res){
+  const b=res.best,lo=res.min,hi=res.max;
+  const L=r=>r.loss/r.tot*100,LB=r=>r.loss/r.beam*100;
+  const aur=parseFloat($('aur').value);
+  const lo_=Math.min(L(lo),L(b),L(hi)),hi_=Math.max(L(lo),L(b),L(hi));
+  let cmp='';
+  if(!isNaN(aur)){
+    const inside=aur>=lo_-.3&&aur<=hi_+.3;
+    cmp=`<div class="card"><span class="note">vs Aurora (${aur}%)</span><b>${inside?'✔ within range':(aur<lo_?'Aurora is lower':'Aurora is higher')}</b><span class="note">${inside?'Model range brackets Aurora’s number.':'Check tree heights, opacity, and Aurora’s shading source (LiDAR age).'}</span></div>`;
+  }
+  const rows=b.trees.map((t,i)=>{
+    const rb=b.rec[i]/b.tot*100,r1=lo.rec[i]/lo.tot*100,r2=hi.rec[i]/hi.tot*100;
+    const w=worst(b,i);
+    return{t,i,rb,r1,r2,solo:b.solo[i]/b.tot*100,w};
+  }).sort((a,c)=>c.rb-a.rb);
+  const maxr=Math.max(.01,...rows.map(r=>r.rb));
+  let html=`<div class="cards">
+    <div class="card"><span class="note">Annual shading loss (all trees)</span><b>${L(b).toFixed(1)}%</b><span class="note">range ${lo_.toFixed(1)}–${hi_.toFixed(1)}% across height uncertainty</span></div>
+    <div class="card"><span class="note">Of beam light only</span><b>${LB(b).toFixed(1)}%</b></div>${cmp}</div>
+  <table><tr><th>Tree</th><th>Recovered if removed</th><th>Range (min–max height)</th><th>Loss alone</th><th>Worst months</th><th>Worst hours (std time)</th></tr>`+
+  rows.map(r=>`<tr><td><span class="dot" style="background:${r.t.color}"></span> ${esc(r.t.name)}<div class="note">${r.t.known?'measured':'est.'} ${r.t.best} m · ${r.t.type}</div></td>
+   <td><b>${r.rb.toFixed(2)}%</b><div class="bar" style="width:${Math.max(2,r.rb/maxr*100)}%;background:${r.t.color}"></div></td>
+   <td>${Math.min(r.r1,r.rb,r.r2).toFixed(2)}–${Math.max(r.r1,r.rb,r.r2).toFixed(2)}%</td>
+   <td>${r.solo.toFixed(2)}%</td><td>${r.w[0]}</td><td>${r.w[1]}</td></tr>`).join('')+`</table>
+  <h2 style="margin-top:14px">When is each tree the culprit? (month × hour, standard time; color = dominant tree, intensity = share of sun blocked)</h2>
+  <canvas id="hm"></canvas><div class="note" id="hmtip">Hover a cell.</div>`;
+  $('p-annual').innerHTML=html;
+  drawHeat(b);
+}
+function hexA(h,a){const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${(n>>8)&255},${n&255},${a})`;}
+function drawHeat(b){
+  const cv=$('hm'),h0=5,h1=20,cw=36,ch=18,pl=36,pt=16;
+  const W=pl+(h1-h0+1)*cw,H=pt+12*ch+4,dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.font='11px sans-serif';
+  c.fillStyle='#8b98a8';
+  for(let h=h0;h<=h1;h++)c.fillText(h,pl+(h-h0)*cw+10,11);
+  for(let m=0;m<12;m++){
+    c.fillStyle='#8b98a8';c.fillText(MON[m],2,pt+m*ch+13);
+    for(let h=h0;h<=h1;h++){
+      const cell=b.cells[m*24+h],x=pl+(h-h0)*cw,y=pt+m*ch;
+      if(cell.beam<=0)c.fillStyle='#10151b';
+      else{
+        const frac=cell.loss/cell.beam;
+        if(frac<.002)c.fillStyle='#233043';
+        else{let bi=0;for(let i=1;i<b.N;i++)if(cell.solo[i]>cell.solo[bi])bi=i;c.fillStyle=hexA(b.trees[bi].color,.2+.8*Math.min(1,frac*3));}
+      }
+      c.fillRect(x+1,y+1,cw-2,ch-2);
+    }
+  }
+  cv.onmousemove=e=>{
+    const r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    const h=Math.floor((x-pl)/cw)+h0,m=Math.floor((y-pt)/ch);
+    if(h<h0||h>h1||m<0||m>11)return;
+    const cell=b.cells[m*24+h];
+    if(cell.beam<=0){$('hmtip').textContent=`${MON[m]} ${h}:00 — no usable sun`;return;}
+    const parts=b.trees.map((t,i)=>cell.solo[i]>0?`${t.name} ${(cell.solo[i]/cell.beam*100).toFixed(0)}%`:'').filter(Boolean);
+    $('hmtip').textContent=`${MON[m]} ${h}:00 — sun blocked ${(cell.loss/cell.beam*100).toFixed(0)}%`+(parts.length?' ('+parts.join(', ')+')':'');
+  };
+}
+
+// ---------- tabs, inputs, persistence ----------
+function switchTab(t){
+  tab=t;
+  document.querySelectorAll('#tabs button[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  $('p-sky').style.display=t==='sky'?'block':'none';
+  $('p-annual').style.display=t==='annual'?'block':'none';
+  $('p-plaus').style.display=t==='plaus'?'block':'none';
+  if(t==='sky'||t==='plaus')render();
+}
+document.querySelectorAll('#tabs button[data-tab]').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$('collapse').onclick=()=>{const c=$('bottom').classList.toggle('collapsed');$('collapse').textContent=c?'▴ Expand':'▾ Collapse';setTimeout(()=>map.invalidateSize(),50);};
+$('run').onclick=runAnalysis;
+
+[['aw','w'],['ad','d'],['ah','h'],['at','tilt'],['az','az']].forEach(([id,k])=>{
+  $(id).addEventListener('input',()=>{const v=parseFloat($(id).value);if(!isNaN(v)){S.arr[k]=v;render();}});
+});
+$('time').addEventListener('input',render);
+$('date').addEventListener('input',render);
+$('dst').addEventListener('input',()=>{S.dst=$('dst').checked;render();});
+$('tz').addEventListener('input',()=>{const v=parseFloat($('tz').value);if(!isNaN(v)){S.tz=v;render();}});
+$('aur').addEventListener('input',()=>{S.aurora=$('aur').value;save();if(lastRes)showResults(lastRes);});
+$('play').onclick=()=>{
+  if(playTimer){clearInterval(playTimer);playTimer=null;$('play').textContent='▶ Play day';return;}
+  $('play').textContent='⏸ Pause';
+  playTimer=setInterval(()=>{let v=+$('time').value+10;if(v>1439)v=0;$('time').value=v;render();},80);
+};
+$('go').onclick=async()=>{
+  const q=$('q').value.trim();if(!q)return;
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q));
+    const j=await r.json();
+    if(!j.length){setStatus('Address not found.');return;}
+    const lat=+j[0].lat,lng=+j[0].lon;
+    S.arr.lat=lat;S.arr.lng=lng;S.tz=Math.round(lng/15);
+    solarMarker.setLatLng([lat,lng]);map.setView([lat,lng],19);
+    $('tz').value=S.tz;setStatus('Found. Move the ☀ pin onto the roof array, then drop tree pins.');render();
+  }catch(e){setStatus('Search failed (offline?). Pan the map manually.');}
+};
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter')$('go').click();});
+$('clear').onclick=()=>{if(!S.trees.length||confirm('Remove all tree pins?')){[...S.trees].forEach(removeTree);buildTrees();render();}};
+
+function snapshot(){return JSON.stringify(S,(k,v)=>k.startsWith('_')?undefined:v);}
+let saveT=null;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem('shadefinder_v1',snapshot());}catch(e){}},300);}
+function apply(o){
+  [...S.trees].forEach(removeTree);
+  Object.assign(S,{arr:o.arr||S.arr,tz:o.tz??S.tz,dst:o.dst??S.dst,aurora:o.aurora||'',nid:o.nid||1});
+  S.trees=(o.trees||[]).map(t=>({...t}));
+  fillInputs();solarMarker.setLatLng([S.arr.lat,S.arr.lng]);map.setView([S.arr.lat,S.arr.lng],19);
+  buildTrees();render();
+}
+function fillInputs(){
+  $('aw').value=S.arr.w;$('ad').value=S.arr.d;$('ah').value=S.arr.h;$('at').value=S.arr.tilt;$('az').value=S.arr.az;
+  $('tz').value=S.tz;$('dst').checked=S.dst;$('aur').value=S.aurora;
+}
+$('save').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([snapshot()],{type:'application/json'}));a.download='shade-finder-project.json';a.click();};
+$('load').onclick=()=>$('file').click();
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{apply(JSON.parse(t));}catch(err){alert('Could not read that file.');}});e.target.value='';};
+
+(function init(){
+  const now=new Date();
+  $('date').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  $('time').value=840;
+  try{const s=localStorage.getItem('shadefinder_v1');if(s){const o=JSON.parse(s);if(o&&o.arr){apply(o);setMode(null);return;}}}catch(e){}
+  fillInputs();buildTrees();render();setMode(null);
+})();
+window.addEventListener('resize',()=>{map.invalidateSize();if(tab==='sky')render();});
+</script>
+</body>
+</html>

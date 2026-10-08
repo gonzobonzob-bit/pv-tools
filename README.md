@@ -11,6 +11,8 @@ calls. Open any `index.html` directly, or use the hosted page.
 | **PW3 String Analyzer** | [`pw3-string-analyzer/`](pw3-string-analyzer/) | Tesla Powerwall 3 MPPT string diagnostic — flags overcurrent, overvoltage, missing or faulty jumpers, dead strings, imbalance | Literal — analyzes PW3 strings |
 | **Lynx** | [`lynx/`](lynx/) | PV CT data reviewer | A lynx catches the faint movement a slower eye misses |
 | **Magpie** | [`magpie/`](magpie/) | Note builder | A magpie gathers scattered pieces into one nest |
+| **Prize Wheel** | [`prize-wheel/`](prize-wheel/) | Spin-the-wheel picker with weighted odds | Literal — it's a prize wheel |
+| **Shade Finder** | [`shade-finder/`](shade-finder/) | Solar/tree shading analyzer — satellite pin-drop, sun-path skyline, plausible-shadow reach, annual per-tree shading breakdown. **Needs internet** (satellite imagery + geocoding) — the one tool here that isn't offline-capable | Literal — finds which tree is shading the array |
 | **Job Photo Packet** | `job-photo-packet/` (local only, gitignored) | Builds a formatted photo packet from job-site photos | Literal — builds the photo packet |
 
 Per-tool documentation lives in each directory. `pw3-string-analyzer/` has a full
