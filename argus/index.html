@@ -159,20 +159,50 @@ input[type=color]{width:100%;height:38px;padding:2px;border:1px solid #363b45;bo
 .preset-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-top:11px}
 .preset-row select{min-width:150px;flex:1}
 .foot{text-align:center;color:#5f6672;font-size:11px;margin-top:22px;font-family:var(--mono)}
+.home-intro{text-align:center;color:var(--muted);font-size:13px;margin:0 0 18px}
+.home-choices{display:flex;flex-direction:column;gap:14px}
+.home-card{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:10px;padding:20px;cursor:pointer;font:inherit;color:inherit;transition:.15s}
+.home-card:hover{background:var(--card-alt);border-color:#4a515c}
+.home-card:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+.home-card-title{font-size:17px;font-weight:700;color:var(--ink)}
+.home-card-title .arrow{color:var(--orange);font-weight:400;margin-left:5px}
+.home-card-desc{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+.home-download{text-align:center;color:var(--muted);font-size:12px;margin-top:18px}
+.home-download a{color:var(--orange)}
+.back-link{background:none;border:0;color:var(--orange);font:inherit;font-size:13px;font-weight:700;
+  cursor:pointer;padding:6px 0;margin-bottom:10px;display:inline-block}
+.back-link:hover{text-decoration:underline}
+.view-intro{color:var(--muted);font-size:13px;margin:0 0 18px}
 </style></head><body><div class="wrap">
 
 <header>
   <div class="title-row">
     <img class="argus-logo" src="data:image/png;base64,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" alt="">
     <h1>Argus</h1>
-    <span class="title-subtitle">Job Photo Packet</span>
   </div>
-  <p>Drop in a job photo folder or zip and get a sectioned, captioned PDF. It all runs right here in the
-     browser, so it is quick and works with no signal.</p>
-  <p style="margin-top:6px;font-size:12px"><a href="https://github.com/gonzobonzob-bit/pv-tools/releases/download/argus-download/Argus.html"
-     style="color:var(--orange)">&#11015; Download Argus.html</a>
-     <span style="color:var(--muted)"> &mdash; for a job site with no signal, save this and open it with no internet at all.</span></p>
 </header>
+
+<div id="home">
+  <p class="home-intro">Pick a tool. Both run right here in the browser &mdash; no signal needed.</p>
+  <div class="home-choices">
+    <button type="button" class="home-card" id="goPacket">
+      <div class="home-card-title">Job Photo Packet <span class="arrow">&rarr;</span></div>
+      <div class="home-card-desc">Drop in a job photo folder or zip and get a sectioned, captioned PDF.</div>
+    </button>
+    <button type="button" class="home-card" id="goCombine">
+      <div class="home-card-title">Combine PDFs <span class="arrow">&rarr;</span></div>
+      <div class="home-card-desc">Merge any number of PDFs into one file, in whatever order you need.</div>
+    </button>
+  </div>
+  <p class="home-download"><a href="https://github.com/gonzobonzob-bit/pv-tools/releases/download/argus-download/Argus.html">&#11015; Download Argus.html</a>
+     &mdash; for a job site with no signal, save this and open it with no internet at all.</p>
+</div>
+
+<div id="packetView" class="hide">
+<button type="button" class="back-link" id="backFromPacket">&larr; Argus</button>
+<p class="view-intro">Drop in a job photo folder or zip and get a sectioned, captioned PDF. It all runs right
+   here in the browser, so it is quick and works with no signal.</p>
 
 <div class="card">
   <h2>1 &middot; Photos</h2>
@@ -286,12 +316,15 @@ input[type=color]{width:100%;height:38px;padding:2px;border:1px solid #363b45;bo
   <div id="bar"><div></div></div>
   <div id="stat"></div>
 </div>
+</div>
+
+<div id="combineView" class="hide">
+<button type="button" class="back-link" id="backFromCombine">&larr; Argus</button>
 
 <div class="card" id="combineCard">
   <h2>Combine PDFs</h2>
   <p style="margin:0 0 11px;color:var(--muted);font-size:13px">Combine any number of PDFs into one file, in
-    the order you arrange them below. Separate from the photo packet above &mdash; runs offline, right here
-    in the browser.</p>
+    the order you arrange them below &mdash; runs offline, right here in the browser.</p>
   <div id="pmDrop" class="drop"><span>Drop <b>PDF</b> files here, or</span>
     <div class="drop-btns"><button type="button" class="sec" id="pmPickBtn">Choose PDFs</button></div>
     <input id="pmPick" type="file" multiple accept=".pdf,application/pdf" class="hide">
@@ -307,6 +340,7 @@ input[type=color]{width:100%;height:38px;padding:2px;border:1px solid #363b45;bo
     <div id="pmBar"><div></div></div>
     <div id="pmStat" style="font-size:13px;color:var(--muted);margin-top:9px;min-height:19px"></div>
   </div>
+</div>
 </div>
 
 <div class="foot">Argus &middot; Monitoring Lizards &middot; runs offline &middot; build 2026-08-15</div>
@@ -2683,14 +2717,15 @@ function pmGate() {
   $('pmHint').textContent = !PM_FILES.length ? 'Add two or more PDFs to begin.'
     : PM_FILES.some(f => f.pages == null && !f.error) ? 'Reading…'
     : PM_FILES.length < 2 ? 'Add at least one more PDF to merge.'
-    : `${PM_FILES.length} files, ${PM_FILES.reduce((a, f) => a + (f.pages || 0), 0)} pages total.`;
+    : `${PM_FILES.length} files, ${PM_FILES.reduce((a, f) => a + (f.pages || 0), 0)} pages total — use ↑/↓ to put them in the order you want before merging.`;
 }
 function pmRender() {
-  $('pmList').innerHTML = PM_FILES.map((f, i) => `<div><span>${esch(f.name)}</span><span>`
+  $('pmList').innerHTML = PM_FILES.map((f, i) => `<div><span>`
+    + `<b style="color:var(--muted);font-family:var(--mono)">${i + 1}.</b> ${esch(f.name)}</span><span>`
     + (f.error ? `<span class="err">${esch(f.error)}</span>` : f.pages == null ? 'reading…' : `${f.pages} pg`)
     + ` &middot; ${(f.size / 1048576).toFixed(1)} MB `
-    + `<button class="mini" data-pmmv="${i}.-1" title="Move earlier" aria-label="Move earlier"${i === 0 ? ' disabled' : ''}>&#9650;</button>`
-    + `<button class="mini" data-pmmv="${i}.1" title="Move later" aria-label="Move later"${i === PM_FILES.length - 1 ? ' disabled' : ''}>&#9660;</button>`
+    + `<button class="mini" data-pmmv="${i}.-1" title="Move up" aria-label="Move up, currently position ${i + 1}"${i === 0 ? ' disabled' : ''} style="font-size:16px">&uarr;</button>`
+    + `<button class="mini" data-pmmv="${i}.1" title="Move down" aria-label="Move down, currently position ${i + 1}"${i === PM_FILES.length - 1 ? ' disabled' : ''} style="font-size:16px">&darr;</button>`
     + `<button class="mini" data-pmrm="${i}" title="Remove" aria-label="Remove">&times;</button>`
     + `</span></div>`).join('');
   pmGate();
@@ -2745,6 +2780,25 @@ $('pmGo').onclick = async () => {
   } catch (err) { pmSay('Merge failed: ' + esch(errMsg(err)), 1); }
   PM_BUSY = false; pmBar(); pmGate();
 };
+
+// ---------------- home: pick a tool, one view visible at a time ----------------
+function showView(name) {
+  $('home').classList.toggle('hide', name !== 'home');
+  $('packetView').classList.toggle('hide', name !== 'packet');
+  $('combineView').classList.toggle('hide', name !== 'combine');
+  const want = name === 'home' ? '' : '#' + name;
+  if (location.hash !== want) history.replaceState(null, '', location.pathname + location.search + want);
+}
+function routeFromHash() {
+  const h = location.hash.slice(1);
+  showView(h === 'packet' || h === 'combine' ? h : 'home');
+}
+$('goPacket').onclick = () => showView('packet');
+$('goCombine').onclick = () => showView('combine');
+$('backFromPacket').onclick = () => showView('home');
+$('backFromCombine').onclick = () => showView('home');
+window.addEventListener('hashchange', routeFromHash);
+routeFromHash();
 
 loadOpts(); renderPresets(''); gate();
 </script></body></html>
