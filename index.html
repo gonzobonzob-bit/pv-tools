@@ -141,17 +141,14 @@
       </a>
     </li>
     <li>
-      <a class="tool" href="job-photo-packet/" id="jpp">
-        <div class="tool-head">
-          <span class="tool-name">Job Photo Packet <span class="arrow">&rarr;</span></span>
-          <span class="badge local">LOCAL ONLY</span>
-        </div>
-        <div class="tool-desc">Builds a formatted photo packet from job-site photos or zips
-        &mdash; customer, subject, sections, and layout. Photos never leave the machine.</div>
-        <div class="name-note">Name: plain and literal, same reason as PW3 &mdash; it builds
-        the photo packet.</div>
-        <span class="hosted-note">Not on the hosted site &mdash; this tool lives only in the
-        local <b>pv-tools</b> folder. Open it from there.</span>
+      <a class="tool" href="argus/">
+        <div class="tool-head"><span class="tool-name">Argus <span class="arrow">&rarr;</span></span></div>
+        <div class="tool-desc">Builds a formatted job photo packet from job-site photos or zips
+        &mdash; customer, subject, sections, and layout. Photos never leave the machine. Also
+        includes a standalone PDF combiner.</div>
+        <div class="name-note">Name: Argus Panoptes, the hundred-eyed giant of Greek myth who
+        never slept &mdash; fitting for a tool whose whole job is making sure no photo on the
+        job gets missed.</div>
       </a>
     </li>
   </ul>
@@ -169,20 +166,5 @@
   <div class="footer">Advisory only &mdash; not a substitute for visual inspection or the planset.</div>
 
 </div>
-
-<script>
-// job-photo-packet/ is deliberately never pushed, so on the hosted site the
-// link would 404. Anything not file:// or localhost is treated as hosted.
-(function(){
-  var h=location.hostname;
-  var isLocal=location.protocol==='file:'||h==='localhost'||h==='127.0.0.1';
-  if(!isLocal){
-    var a=document.getElementById('jpp');
-    a.classList.add('unavailable');
-    a.removeAttribute('href');
-    a.setAttribute('aria-disabled','true');
-  }
-})();
-</script>
 </body>
 </html>

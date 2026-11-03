@@ -13,7 +13,7 @@ calls. Open any `index.html` directly, or use the hosted page.
 | **Magpie** | [`magpie/`](magpie/) | Note builder | A magpie gathers scattered pieces into one nest |
 | **Prize Wheel** | [`prize-wheel/`](prize-wheel/) | Spin-the-wheel picker with weighted odds | Literal — it's a prize wheel |
 | **Shade Finder** | [`shade-finder/`](shade-finder/) | Solar/tree shading analyzer — satellite pin-drop, sun-path skyline, plausible-shadow reach, annual per-tree shading breakdown. **Needs internet** (satellite imagery + geocoding) — the one tool here that isn't offline-capable | Literal — finds which tree is shading the array |
-| **Job Photo Packet** | `job-photo-packet/` (local only, gitignored) | Builds a formatted photo packet from job-site photos | Literal — builds the photo packet |
+| **Argus** | [`argus/`](argus/) | Builds a formatted job photo packet from job-site photos or zips; also includes a standalone PDF combiner | Argus Panoptes, the hundred-eyed giant who never slept — fitting for a tool that makes sure no photo gets missed |
 
 Per-tool documentation lives in each directory. `pw3-string-analyzer/` has a full
 [README](pw3-string-analyzer/README.md) and [SPECS](pw3-string-analyzer/SPECS.md) with
